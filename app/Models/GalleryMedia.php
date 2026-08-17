@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class GalleryMedia extends Model
+{
+    use HasFactory;
+
+    protected $table = 'gallery_media';
+
+    protected $fillable = [
+        'title',
+        'type',
+        'url',
+        'category_id',
+        'place_id',
+        'file_size',
+        'dimensions',
+        'uploaded_by_user_id',
+        'views_count',
+        'likes_count',
+        'status',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'category_id' => 'integer',
+            'place_id' => 'integer',
+            'uploaded_by_user_id' => 'integer',
+            'views_count' => 'integer',
+            'likes_count' => 'integer',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function place()
+    {
+        return $this->belongsTo(Place::class, 'place_id');
+    }
+
+    public function uploader()
+    {
+        return $this->belongsTo(User::class, 'uploaded_by_user_id');
+    }
+
+    public function tags()
+    {
+        return $this->hasMany(GalleryMediaTag::class, 'media_id');
+    }
+}
