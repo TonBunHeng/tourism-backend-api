@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GalleryMediaResource;
+use App\Models\Category;
 use App\Models\GalleryMedia;
 use App\Models\GalleryMediaTag;
+use App\Models\Place;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,11 +26,22 @@ class GalleryController extends Controller
         }
 
         if ($type = $request->query('type')) {
-            $query->where('type', $type);
+            if ($type !== 'All') {
+                $query->where('type', strtolower($type));
+            }
         }
 
         if ($categoryId = $request->query('category_id')) {
             $query->where('category_id', $categoryId);
+        } elseif ($category = $request->query('category')) {
+            if ($category !== 'All') {
+                $catModel = Category::where('name', $category)->first();
+                if ($catModel) {
+                    $query->where('category_id', $catModel->id);
+                } else {
+                    $query->where('id', 0); // No match
+                }
+            }
         }
 
         if ($placeId = $request->query('place_id')) {
@@ -36,7 +49,9 @@ class GalleryController extends Controller
         }
 
         if ($status = $request->query('status')) {
-            $query->where('status', $status);
+            if ($status !== 'All') {
+                $query->where('status', $status);
+            }
         }
 
         $perPage = (int) $request->query('per_page', 12);
@@ -52,6 +67,28 @@ class GalleryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Auto-resolve category_id from category string
+        if (!$request->has('category_id') && $request->has('category')) {
+            $cat = Category::where('name', $request->input('category'))->first();
+            if ($cat) {
+                $request->merge(['category_id' => $cat->id]);
+            }
+        }
+
+        if (!$request->has('type')) {
+            $request->merge(['type' => 'image']);
+        } else {
+            $request->merge(['type' => strtolower($request->input('type'))]);
+        }
+
+        if (!$request->has('status')) {
+            $request->merge(['status' => 'Published']);
+        }
+
+        if (!$request->has('file_size') && $request->has('size')) {
+            $request->merge(['file_size' => $request->input('size')]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:150',
             'type' => ['required', Rule::in(['image', 'video'])],
@@ -65,10 +102,10 @@ class GalleryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $tags = $validated['tags'] ?? [];
+        $tags = $validated['tags'] ?? ['Cambodia', 'Tourism'];
         unset($validated['tags']);
 
-        $validated['uploaded_by_user_id'] = $request->user()?->id;
+        $validated['uploaded_by_user_id'] = $request->user()?->id ?? 1;
 
         $media = GalleryMedia::create($validated);
 
@@ -105,6 +142,17 @@ class GalleryController extends Controller
             return $this->errorResponse('Gallery item not found.', 404);
         }
 
+        if (!$request->has('category_id') && $request->has('category')) {
+            $cat = Category::where('name', $request->input('category'))->first();
+            if ($cat) {
+                $request->merge(['category_id' => $cat->id]);
+            }
+        }
+
+        if ($request->has('type')) {
+            $request->merge(['type' => strtolower($request->input('type'))]);
+        }
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:150',
             'type' => ['sometimes', Rule::in(['image', 'video'])],
@@ -118,17 +166,15 @@ class GalleryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        if (array_key_exists('tags', $validated)) {
-            $tags = $validated['tags'] ?? [];
-            unset($validated['tags']);
-
+        if (isset($validated['tags'])) {
             GalleryMediaTag::where('media_id', $media->id)->delete();
-            foreach ($tags as $tagName) {
+            foreach ($validated['tags'] as $tagName) {
                 GalleryMediaTag::create([
                     'media_id' => $media->id,
                     'tag_name' => $tagName,
                 ]);
             }
+            unset($validated['tags']);
         }
 
         $media->update($validated);
@@ -145,6 +191,7 @@ class GalleryController extends Controller
             return $this->errorResponse('Gallery item not found.', 404);
         }
 
+        GalleryMediaTag::where('media_id', $media->id)->delete();
         $media->delete();
 
         return $this->successResponse(null, 'Gallery item deleted successfully.');

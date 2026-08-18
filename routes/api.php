@@ -10,8 +10,10 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\GalleryController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\ProvinceController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SystemSettingController;
+use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -32,64 +34,76 @@ Route::get('/health', function () {
 
 // Public Authentication
 Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+
+// Public App Settings & Analytics
+Route::get('/settings', [SystemSettingController::class, 'index']);
+Route::get('/dashboard/stats', [DashboardController::class, 'index']);
+Route::get('/reports/analytics', [ReportController::class, 'analytics']);
+Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
+Route::get('/reviews/analytics', [ReviewController::class, 'analytics']);
 
 // Public Read-Only Content APIs
 Route::get('/places', [PlaceController::class, 'index']);
 Route::get('/places/{id}', [PlaceController::class, 'show']);
-
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
-
 Route::get('/provinces', [ProvinceController::class, 'index']);
 Route::get('/provinces/{id}', [ProvinceController::class, 'show']);
-
 Route::get('/events', [EventController::class, 'index']);
 Route::get('/events/{id}', [EventController::class, 'show']);
-
 Route::get('/galleries', [GalleryController::class, 'index']);
 Route::get('/galleries/{id}', [GalleryController::class, 'show']);
-
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{id}', [ReviewController::class, 'show']);
 
-Route::get('/dashboard/stats', [DashboardController::class, 'index']);
+// File Upload endpoint
+Route::post('/upload', [UploadController::class, 'upload']);
 
-// Protected APIs (Sanctum Authentication Required)
+// Protected APIs (Sanctum Auth)
 Route::middleware('auth:sanctum')->group(function () {
     // Auth & Profile
     Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
 
-    // Users CRUD
-    Route::apiResource('users', UserController::class);
+    // Admin Dashboard & Reports
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Places Write
+    // Content Management (CRUD)
     Route::post('/places', [PlaceController::class, 'store']);
     Route::put('/places/{id}', [PlaceController::class, 'update']);
     Route::delete('/places/{id}', [PlaceController::class, 'destroy']);
 
-    // Categories Write
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
-    // Provinces Write
     Route::post('/provinces', [ProvinceController::class, 'store']);
     Route::put('/provinces/{id}', [ProvinceController::class, 'update']);
     Route::delete('/provinces/{id}', [ProvinceController::class, 'destroy']);
 
-    // Events Write
     Route::post('/events', [EventController::class, 'store']);
     Route::put('/events/{id}', [EventController::class, 'update']);
     Route::delete('/events/{id}', [EventController::class, 'destroy']);
 
-    // Reviews Write & Replies
+    Route::post('/galleries', [GalleryController::class, 'store']);
+    Route::put('/galleries/{id}', [GalleryController::class, 'update']);
+    Route::delete('/galleries/{id}', [GalleryController::class, 'destroy']);
+
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::put('/reviews/{id}', [ReviewController::class, 'update']);
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
-    Route::post('/reviews/{id}/replies', [ReviewController::class, 'addReply']);
+    Route::put('/reviews/{id}/status', [ReviewController::class, 'updateStatus']);
+
+    // Users Management
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
 
     // Favorites
     Route::get('/favorites', [FavoriteController::class, 'index']);
@@ -97,12 +111,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/favorites/{placeId}', [FavoriteController::class, 'destroy']);
     Route::patch('/favorites/{id}/toggle-visited', [FavoriteController::class, 'toggleVisited']);
 
-    // Gallery Write
-    Route::post('/galleries', [GalleryController::class, 'store']);
-    Route::put('/galleries/{id}', [GalleryController::class, 'update']);
-    Route::delete('/galleries/{id}', [GalleryController::class, 'destroy']);
-
-    // Chats & Messaging
+    // Chat / Messages
     Route::get('/chats', [ChatController::class, 'index']);
     Route::post('/chats', [ChatController::class, 'store']);
     Route::get('/chats/{id}', [ChatController::class, 'show']);
@@ -120,7 +129,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{userId}/achievements', [UserAchievementController::class, 'userAchievements']);
     Route::put('/achievements/{id}/toggle', [UserAchievementController::class, 'toggleUnlocked']);
 
-    // System Settings
-    Route::get('/settings', [SystemSettingController::class, 'index']);
+    // System Settings Write
     Route::put('/settings', [SystemSettingController::class, 'update']);
 });

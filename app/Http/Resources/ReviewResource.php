@@ -9,22 +9,32 @@ class ReviewResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $userName = $this->relationLoaded('user') ? $this->user?->name : 'Traveler';
+        $userAvatar = $this->relationLoaded('user') ? $this->user?->avatar : null;
+        $placeName = $this->relationLoaded('place') ? $this->place?->name : 'Destination';
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
-            'user_name' => $this->whenLoaded('user', fn() => $this->user->name),
-            'user_avatar' => $this->whenLoaded('user', fn() => $this->user->avatar),
+            'user_name' => $userName,
+            'user' => $userName,
+            'user_avatar' => $userAvatar,
+            'avatar' => $userAvatar,
             'place_id' => $this->place_id,
-            'place_name' => $this->whenLoaded('place', fn() => $this->place->name),
+            'place_name' => $placeName,
+            'place' => $placeName,
             'rating' => (int) $this->rating,
-            'title' => $this->title,
+            'title' => $this->title ?? 'Experience Review',
             'comment' => $this->comment,
-            'likes_count' => (int) $this->likes_count,
-            'dislikes_count' => (int) $this->dislikes_count,
+            'likes_count' => (int) ($this->likes_count ?? 0),
+            'likes' => (int) ($this->likes_count ?? 0),
+            'dislikes_count' => (int) ($this->dislikes_count ?? 0),
+            'dislikes' => (int) ($this->dislikes_count ?? 0),
             'is_verified' => (bool) $this->is_verified,
-            'status' => $this->status,
-            'images' => $this->whenLoaded('images', fn() => $this->images->pluck('image_url')),
+            'status' => $this->status ?? 'Approved',
+            'images' => $this->relationLoaded('images') ? $this->images->pluck('image_url')->toArray() : [],
             'replies' => ReviewReplyResource::collection($this->whenLoaded('replies')),
+            'date' => $this->created_at ? $this->created_at->format('M d, Y') : 'Aug 18, 2026',
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
         ];

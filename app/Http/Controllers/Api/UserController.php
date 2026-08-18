@@ -93,7 +93,7 @@ class UserController extends Controller
             'email' => ['sometimes', 'required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => 'nullable|string|min:6',
             'phone' => 'nullable|string|max:30',
-            'avatar' => 'nullable|string|max:255',
+            'avatar' => 'nullable|string',
             'role' => ['sometimes', Rule::in(['Super Admin', 'Admin', 'Guide / Editor', 'User'])],
             'status' => ['sometimes', Rule::in(['Active', 'Inactive', 'Suspended'])],
             'location' => 'nullable|string|max:100',

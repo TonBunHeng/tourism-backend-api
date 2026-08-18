@@ -7,6 +7,7 @@ use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Models\EventTag;
 use App\Traits\ApiResponse;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,7 +30,41 @@ class EventController extends Controller
         }
 
         if ($status = $request->query('status')) {
-            $query->where('status', $status);
+            if ($status !== 'All') {
+                $today = Carbon::today()->toDateString();
+                if ($status === 'Upcoming') {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('status', 'Upcoming')
+                          ->orWhere(function ($sq) use ($today) {
+                              $sq->whereNotIn('status', ['Cancelled', 'Completed'])
+                                 ->where('start_date', '>', $today);
+                          });
+                    });
+                } elseif ($status === 'Ongoing') {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('status', 'Ongoing')
+                          ->orWhere(function ($sq) use ($today) {
+                              $sq->whereNotIn('status', ['Cancelled'])
+                                 ->where('start_date', '<=', $today)
+                                 ->where(function ($eq) use ($today) {
+                                     $eq->whereNull('end_date')
+                                        ->orWhere('end_date', '>=', $today);
+                                 });
+                          });
+                    });
+                } elseif ($status === 'Completed') {
+                    $query->where(function ($q) use ($today) {
+                        $q->where('status', 'Completed')
+                          ->orWhere(function ($sq) use ($today) {
+                              $sq->whereNotIn('status', ['Cancelled'])
+                                 ->whereNotNull('end_date')
+                                 ->where('end_date', '<', $today);
+                          });
+                    });
+                } else {
+                    $query->where('status', $status);
+                }
+            }
         }
 
         if ($provinceId = $request->query('province_id')) {
@@ -58,6 +93,12 @@ class EventController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Normalize status alias or auto-compute
+        if (!$request->has('status') || $request->input('status') === 'Auto' || $request->input('status') === '') {
+            $computed = Event::autoStatusFor($request->input('start_date'), $request->input('end_date'));
+            $request->merge(['status' => $computed]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:200',
             'category' => 'required|string|max:100',
@@ -73,11 +114,21 @@ class EventController extends Controller
             'organizer' => 'nullable|string|max:150',
             'featured' => 'boolean',
             'rating' => 'numeric|min:0|max:5',
-            'image_url' => 'nullable|string|max:255',
-            'status' => ['required', Rule::in(['Upcoming', 'Ongoing', 'Completed', 'Cancelled', 'Scheduled'])],
+            'image_url' => 'nullable|string',
+            'image' => 'nullable|string',
+            'status' => ['required', Rule::in(['Upcoming', 'Ongoing', 'Completed', 'Cancelled', 'Scheduled', 'Auto'])],
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
         ]);
+
+        if (isset($validated['status']) && $validated['status'] === 'Auto') {
+            $validated['status'] = Event::autoStatusFor($validated['start_date'], $validated['end_date'] ?? null);
+        }
+
+        if (isset($validated['image']) && !isset($validated['image_url'])) {
+            $validated['image_url'] = $validated['image'];
+        }
+        unset($validated['image']);
 
         $tags = $validated['tags'] ?? [];
         unset($validated['tags']);
@@ -115,6 +166,12 @@ class EventController extends Controller
             return $this->errorResponse('Event not found.', 404);
         }
 
+        if ($request->input('status') === 'Auto') {
+            $startDate = $request->input('start_date') ?? $event->start_date?->format('Y-m-d');
+            $endDate = $request->input('end_date') ?? $event->end_date?->format('Y-m-d');
+            $request->merge(['status' => Event::autoStatusFor($startDate, $endDate)]);
+        }
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:200',
             'category' => 'sometimes|required|string|max:100',
@@ -130,11 +187,23 @@ class EventController extends Controller
             'organizer' => 'nullable|string|max:150',
             'featured' => 'sometimes|boolean',
             'rating' => 'sometimes|numeric|min:0|max:5',
-            'image_url' => 'nullable|string|max:255',
-            'status' => ['sometimes', Rule::in(['Upcoming', 'Ongoing', 'Completed', 'Cancelled', 'Scheduled'])],
+            'image_url' => 'nullable|string',
+            'image' => 'nullable|string',
+            'status' => ['sometimes', Rule::in(['Upcoming', 'Ongoing', 'Completed', 'Cancelled', 'Scheduled', 'Auto'])],
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
         ]);
+
+        if (isset($validated['status']) && $validated['status'] === 'Auto') {
+            $startDate = $validated['start_date'] ?? $event->start_date?->format('Y-m-d');
+            $endDate = $validated['end_date'] ?? $event->end_date?->format('Y-m-d');
+            $validated['status'] = Event::autoStatusFor($startDate, $endDate);
+        }
+
+        if (isset($validated['image']) && !isset($validated['image_url'])) {
+            $validated['image_url'] = $validated['image'];
+        }
+        unset($validated['image']);
 
         if (array_key_exists('tags', $validated)) {
             $tags = $validated['tags'] ?? [];

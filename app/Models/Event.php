@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -43,6 +44,56 @@ class Event extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Compute dynamic status based on start_date and end_date.
+     */
+    public function getComputedStatusAttribute(): string
+    {
+        $rawStatus = $this->attributes['status'] ?? 'Upcoming';
+        if ($rawStatus === 'Cancelled') {
+            return 'Cancelled';
+        }
+
+        if (!$this->start_date) {
+            return $rawStatus ?: 'Upcoming';
+        }
+
+        $today = Carbon::today();
+        $start = Carbon::parse($this->start_date)->startOfDay();
+        $end = $this->end_date ? Carbon::parse($this->end_date)->endOfDay() : $start->copy()->endOfDay();
+
+        if ($today->lt($start)) {
+            return 'Upcoming';
+        } elseif ($today->gt($end)) {
+            return 'Completed';
+        } else {
+            return 'Ongoing';
+        }
+    }
+
+    public static function autoStatusFor(?string $startDate, ?string $endDate, ?string $manualStatus = null): string
+    {
+        if ($manualStatus === 'Cancelled') {
+            return 'Cancelled';
+        }
+
+        if (!$startDate) {
+            return $manualStatus ?: 'Upcoming';
+        }
+
+        $today = Carbon::today();
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = $endDate ? Carbon::parse($endDate)->endOfDay() : $start->copy()->endOfDay();
+
+        if ($today->lt($start)) {
+            return 'Upcoming';
+        } elseif ($today->gt($end)) {
+            return 'Completed';
+        } else {
+            return 'Ongoing';
+        }
     }
 
     public function place()

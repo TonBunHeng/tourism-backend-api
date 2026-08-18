@@ -11,8 +11,11 @@ class SystemSettingResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'key' => $this->setting_key,
             'setting_key' => $this->setting_key,
+            'value' => $this->setting_value,
             'setting_value' => $this->setting_value,
+            'group' => $this->setting_group,
             'setting_group' => $this->setting_group,
             'description' => $this->description,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,

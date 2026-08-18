@@ -83,12 +83,25 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:100',
+            'email' => ['sometimes', 'required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'nullable|string|max:30',
             'avatar' => 'nullable|string',
+            'image' => 'nullable|string',
             'location' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:100',
             'bio' => 'nullable|string',
             'password' => 'nullable|string|min:6',
         ]);
+
+        if (isset($validated['image']) && !isset($validated['avatar'])) {
+            $validated['avatar'] = $validated['image'];
+        }
+        unset($validated['image']);
+
+        if (isset($validated['address']) && !isset($validated['location'])) {
+            $validated['location'] = $validated['address'];
+        }
+        unset($validated['address']);
 
         if (!empty($validated['password'])) {
             $validated['password_hash'] = Hash::make($validated['password']);
@@ -98,6 +111,21 @@ class AuthController extends Controller
         $user->update($validated);
 
         return $this->successResponse(new UserResource($user), 'Profile updated successfully.');
+    }
+
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'avatar' => 'nullable|string',
+            'image' => 'nullable|string',
+        ]);
+
+        $avatar = $validated['avatar'] ?? $validated['image'] ?? null;
+        $user->update(['avatar' => $avatar]);
+
+        return $this->successResponse(new UserResource($user), 'Avatar updated successfully.');
     }
 
     public function logout(Request $request): JsonResponse

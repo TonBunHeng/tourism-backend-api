@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlaceResource;
 use App\Models\Category;
 use App\Models\Place;
+use App\Models\Province;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,7 +46,9 @@ class PlaceController extends Controller
         }
 
         if ($status = $request->query('status')) {
-            $query->where('status', $status);
+            if ($status !== 'All') {
+                $query->where('status', $status);
+            }
         }
 
         if ($request->has('featured')) {
@@ -66,6 +69,38 @@ class PlaceController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Auto-resolve category_id from category name if needed
+        if (!$request->has('category_id') && $request->has('category')) {
+            $cat = Category::where('name', $request->input('category'))->first();
+            if ($cat) {
+                $request->merge(['category_id' => $cat->id]);
+            } else {
+                $firstCat = Category::first();
+                if ($firstCat) {
+                    $request->merge(['category_id' => $firstCat->id]);
+                }
+            }
+        }
+
+        // Auto-resolve province_id from province name or address
+        if (!$request->has('province_id') && $request->has('province')) {
+            $prov = Province::where('name', $request->input('province'))->first();
+            if ($prov) {
+                $request->merge(['province_id' => $prov->id]);
+            }
+        }
+
+        if (!$request->has('category_id')) {
+            $firstCat = Category::first();
+            if ($firstCat) {
+                $request->merge(['category_id' => $firstCat->id]);
+            }
+        }
+
+        if (!$request->has('status')) {
+            $request->merge(['status' => 'Active']);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:150',
             'category_id' => 'required|exists:categories,id',
@@ -78,11 +113,21 @@ class PlaceController extends Controller
             'best_time' => 'nullable|string|max:100',
             'duration' => 'nullable|string|max:50',
             'price' => 'nullable|string|max:50',
-            'rating' => 'numeric|min:0|max:5',
-            'image_url' => 'nullable|string|max:255',
-            'is_featured' => 'boolean',
+            'rating' => 'nullable|numeric|min:0|max:5',
+            'image_url' => 'nullable|string',
+            'image' => 'nullable|string',
+            'is_featured' => 'nullable|boolean',
             'status' => ['required', Rule::in(['Active', 'Inactive', 'Pending'])],
         ]);
+
+        if (isset($validated['image']) && !isset($validated['image_url'])) {
+            $validated['image_url'] = $validated['image'];
+        }
+        unset($validated['image']);
+
+        if (!isset($validated['rating'])) {
+            $validated['rating'] = 5.0;
+        }
 
         $place = Place::create($validated);
         $place->load(['category', 'province']);
@@ -109,6 +154,21 @@ class PlaceController extends Controller
             return $this->errorResponse('Place not found.', 404);
         }
 
+        // Auto-resolve category_id if only category name is provided
+        if (!$request->has('category_id') && $request->has('category')) {
+            $cat = Category::where('name', $request->input('category'))->first();
+            if ($cat) {
+                $request->merge(['category_id' => $cat->id]);
+            }
+        }
+
+        if (!$request->has('province_id') && $request->has('province')) {
+            $prov = Province::where('name', $request->input('province'))->first();
+            if ($prov) {
+                $request->merge(['province_id' => $prov->id]);
+            }
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:150',
             'category_id' => 'sometimes|required|exists:categories,id',
@@ -122,10 +182,16 @@ class PlaceController extends Controller
             'duration' => 'nullable|string|max:50',
             'price' => 'nullable|string|max:50',
             'rating' => 'sometimes|numeric|min:0|max:5',
-            'image_url' => 'nullable|string|max:255',
+            'image_url' => 'nullable|string',
+            'image' => 'nullable|string',
             'is_featured' => 'sometimes|boolean',
             'status' => ['sometimes', Rule::in(['Active', 'Inactive', 'Pending'])],
         ]);
+
+        if (isset($validated['image']) && !isset($validated['image_url'])) {
+            $validated['image_url'] = $validated['image'];
+        }
+        unset($validated['image']);
 
         $place->update($validated);
         $place->load(['category', 'province']);
