@@ -1,223 +1,378 @@
-# 🏛️ Smart Tourism Backend API
+# 🏛️ AngkorVerses Backend API
 
-A comprehensive, production-ready RESTful API backend for a **Smart Tourism Information & Management System**, built with Laravel, MySQL, and Laravel Sanctum.
+A comprehensive, production-ready central RESTful API backend for the **AngkorVerses System**, built with Laravel, MySQL, and Laravel Sanctum.
+
+This unified backend powers both the **Admin Management Web (`tourism-frontend`)** and the **Travel/User Client Applications (`tourism-travel` Tourist Web and the Tourist Android Mobile App)**.
+
+---
+
+## 🏛️ Architecture Overview
+
+```text
+                               Laravel Backend API
+                               tourism-backend-api
+                                        │
+                 ┌──────────────────────┴──────────────────────┐
+                 │                                             │
+                 ▼                                             ▼
+            Admin API                                      Travel API
+           `/api/*`                                     `/api/travel/*`
+                 │                                             │
+                 ▼                                     ┌───────┴───────┐
+          tourism-frontend                             │               │
+           Admin Web App                               ▼               ▼
+                                                tourism-travel     Android App
+                                                  Tourist Web    Tourist Mobile
+```
 
 ---
 
 ## 📋 Table of Contents
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Key Features & Modules](#key-features--modules)
-- [Database Architecture](#database-architecture)
-- [API Endpoints Reference](#api-endpoints-reference)
-- [Standard API Response Format](#standard-api-response-format)
-- [Installation & Setup](#installation--setup)
-- [Default Seeded Accounts](#default-seeded-accounts)
-- [Project Directory Structure](#project-directory-structure)
-
----
-
-## 🌟 Overview
-
-The **Smart Tourism Backend API** powers tourism mobile apps, web portals, and administrative dashboards. It enables tourists to discover destinations, explore upcoming cultural events, read and post verified reviews, curate personal itineraries/favorites, interact via support chat, and track gamified achievements, while providing administrators with rich management tools and statistics.
+- [Tech Stack](#-tech-stack)
+- [Roles & Permissions](#-roles--permissions)
+- [Travel / User API Reference (`/api/travel/*`)](#-travel--user-api-reference-apitravel)
+  - [1. Authentication](#1-authentication)
+  - [2. Tourist Destinations (Places)](#2-tourist-destinations-places)
+  - [3. Provinces & Locations](#3-provinces--locations)
+  - [4. Categories](#4-categories)
+  - [5. Events & Festivals](#5-events--festivals)
+  - [6. Media Gallery](#6-media-gallery)
+  - [7. Reviews & Ratings](#7-reviews--ratings)
+  - [8. Favorites & Wishlist](#8-favorites--wishlist)
+  - [9. Gamification & Achievements](#9-gamification--achievements)
+  - [10. Live Support Chat](#10-live-support-chat)
+  - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
+  - [12. Public App Settings](#12-public-app-settings)
+- [Admin Management API Reference (`/api/*`)](#-admin-management-api-reference-api)
+- [Standard API Response Format](#-standard-api-response-format)
+- [Installation & Setup](#-installation--setup)
+- [Testing](#-testing)
+- [Default Seeded Accounts](#-default-seeded-accounts)
+- [Project Directory Structure](#-project-directory-structure)
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Framework:** Laravel 11.x / 12.x (PHP 8.2+)
-- **Database:** MySQL / MariaDB (Database migrations + Seeders included)
-- **Authentication:** Laravel Sanctum (Token-based Bearer Authentication)
-- **Architecture:** Controller-Service-Model REST API pattern with standard ApiResponse traits
+- **Database:** MySQL 8.0+ / SQLite for testing
+- **Authentication:** Laravel Sanctum (Bearer Tokens)
+- **OAuth Providers:** Google OAuth 2.0 & Facebook Graph API
+- **Architecture:** Form Requests, API Resources, Role Middleware (`admin.role`), Standard `ApiResponse` Trait
 
 ---
 
-## ✨ Key Features & Modules
+## 👥 Roles & Permissions
 
-1. **Authentication & User Management**
-   - User registration & login with secure password hashing (`bcrypt`).
-   - Token-based API access via Laravel Sanctum.
-   - Profile management, avatar upload support, two-factor status, role-based access (`Super Admin`, `Guide / Editor`, `Tourist`).
+| Role | Target Client | Capabilities |
+|---|---|---|
+| `User` | Tourist Web & Android Mobile App | Browse destinations, post reviews, save wishlist, live support chat, submit deletion requests |
+| `Guide / Editor` | Admin Portal | Manage destination content, event schedules, media gallery |
+| `Admin` | Admin Portal | Review moderation, analytics, user management, support moderation |
+| `Super Admin` | Admin Portal | Full administrative access, system configuration, user deletion approval |
 
-2. **Provinces & Locations**
-   - Multi-language province directory (Khmer & English names).
-   - Coordinates (latitude/longitude), capital city, area, population, and cover images.
-
-3. **Categories & Tagging**
-   - Hierarchical categorisation for destinations and attractions (e.g., Temples, Nature & Eco-tourism, Beaches, Cultural Heritage).
-
-4. **Places & Attractions Directory**
-   - Full destination information: descriptions, opening hours, entrance fees, contact details, coordinates, ratings, highlights, and tags.
-
-5. **Events & Cultural Festivities**
-   - Upcoming and recurring events, date ranges, ticketing status, venue details, and organizer info.
-
-6. **Interactive Reviews & Rating System**
-   - 1-to-5 star rating breakdown (overall, cleanliness, value, accessibility, hospitality).
-   - Multi-image attachments per review and official reply threads.
-
-7. **Wishlist & Favorites**
-   - Bookmark favorite places with "visited" status toggling and personalized visit notes.
-
-8. **Rich Media Gallery**
-   - High-resolution tourism photo & video gallery with tagging, view counters, like counts, and licensing metadata.
-
-9. **Live Support & Inquiry Chat**
-   - Real-time tourist support conversations, support tickets, and threaded message history.
-
-10. **Data Privacy & Deletion Requests**
-    - Compliance/GDPR data management allowing users to request account and data removal with admin approval workflows.
-
-11. **Gamification & Achievements**
-    - Badges and travel achievements (e.g., "Angkor Explorer", "Eco Traveler") with unlock tracking and points.
-
-12. **System Settings & App Configuration**
-    - Dynamic application settings (maintenance mode, emergency helpline numbers, app versions, terms & policies).
-
-13. **Analytics & Dashboard**
-    - Aggregate statistics for admin dashboards (total destinations, reviews, users, events, and monthly metrics).
+> **Security Rule:** Normal `User` role accounts are strictly blocked (`HTTP 403 Forbidden`) from accessing Admin management endpoints.
 
 ---
 
-## 🗄️ Database Architecture
+## 🚀 Travel / User API Reference (`/api/travel/*`)
 
-The database contains 21 migration tables organized as follows:
+All Travel endpoints share the `/api/travel` prefix and are consumed identically by **`tourism-travel`** and the **Android Mobile App**.
 
-| Table | Description |
-|---|---|
-| `users` | User accounts, roles, subscription tier, verification status |
-| `personal_access_tokens` | Sanctum API tokens |
-| `provinces` | Geographic province & regional data |
-| `categories` | Place and attraction classification categories |
-| `places` | Tourist destinations, coordinates, prices, ratings |
-| `events` | Festivals, cultural events, exhibitions |
-| `event_tags` | Tagging system for events |
-| `reviews` | Tourist reviews, sub-ratings, visit dates |
-| `review_replies` | Official replies to reviews by guides/administrators |
-| `review_images` | Photos uploaded with reviews |
-| `favorites` | User saved bookmarks and visited statuses |
-| `gallery_media` | Media gallery (images/videos) with metadata |
-| `gallery_media_tags` | Tag mappings for gallery media |
-| `chats` | Tourist support and inquiry conversation threads |
-| `chat_messages` | Individual messages within chat threads |
-| `deletion_requests` | GDPR & user account/data deletion requests |
-| `deletion_request_items` | Specific sub-items requested for deletion |
-| `user_achievements` | Gamified milestones and tourist badges |
-| `system_settings` | Key-value application configurations |
-| `cache` / `jobs` | Laravel system cache and background queue jobs |
+### 1. Authentication
+
+#### Register Tourist Account
+- **Endpoint:** `POST /api/travel/auth/register`
+- **Auth:** Public
+- **Request Body:**
+  ```json
+  {
+    "name": "Sophea Traveler",
+    "email": "sophea@example.com",
+    "password": "password123",
+    "password_confirmation": "password123",
+    "phone": "+855 12 345 678",
+    "location": "Phnom Penh",
+    "bio": "Passionate travel photographer."
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "success": true,
+    "message": "Registration successful.",
+    "data": {
+      "user": {
+        "id": 1,
+        "name": "Sophea Traveler",
+        "email": "sophea@example.com",
+        "phone": "+855 12 345 678",
+        "role": "User",
+        "status": "Active",
+        "location": "Phnom Penh",
+        "bio": "Passionate travel photographer.",
+        "verified": false
+      },
+      "token": "1|sanctum_token_string...",
+      "token_type": "Bearer"
+    }
+  }
+  ```
+
+#### Email & Password Login
+- **Endpoint:** `POST /api/travel/auth/login`
+- **Auth:** Public
+- **Request Body:**
+  ```json
+  {
+    "email": "sophea@example.com",
+    "password": "password123"
+  }
+  ```
+
+#### Google OAuth Login
+- **Endpoint:** `POST /api/travel/auth/google`
+- **Auth:** Public
+- **Request Body:**
+  ```json
+  {
+    "id_token": "google_oauth_id_token...",
+    "email": "sophea.traveler@gmail.com",
+    "name": "Sophea Traveler",
+    "avatar": "https://lh3.googleusercontent.com/..."
+  }
+  ```
+
+#### Facebook OAuth Login
+- **Endpoint:** `POST /api/travel/auth/facebook`
+- **Auth:** Public
+- **Request Body:**
+  ```json
+  {
+    "access_token": "facebook_access_token...",
+    "facebook_id": "1234567890",
+    "name": "Sophea Traveler"
+  }
+  ```
+
+#### Get Current Authenticated Tourist
+- **Endpoint:** `GET /api/travel/auth/me`
+- **Auth:** `Bearer Token` (`auth:sanctum`)
+
+#### Update Profile
+- **Endpoint:** `PUT /api/travel/auth/profile`
+- **Auth:** `Bearer Token`
+- **Request Body:**
+  ```json
+  {
+    "name": "Sophea Traveler Updated",
+    "phone": "+855 88 999 000",
+    "location": "Siem Reap",
+    "bio": "Heritage enthusiast exploring Angkor."
+  }
+  ```
+
+#### Change Password
+- **Endpoint:** `PUT /api/travel/auth/password`
+- **Auth:** `Bearer Token`
+- **Request Body:**
+  ```json
+  {
+    "current_password": "password123",
+    "password": "newpassword456",
+    "password_confirmation": "newpassword456"
+  }
+  ```
+
+#### Upload Avatar
+- **Endpoint:** `POST /api/travel/auth/avatar`
+- **Auth:** `Bearer Token`
+- **Content-Type:** `multipart/form-data`
+- **Body:** `avatar` (Image file: jpeg, png, jpg, webp - Max 5MB)
+
+#### Logout
+- **Endpoint:** `POST /api/travel/auth/logout`
+- **Auth:** `Bearer Token`
 
 ---
 
-## 🚀 API Endpoints Reference
+### 2. Tourist Destinations (Places)
 
-### 1. System & Authentication
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/health` | Healthcheck and service status | No |
-| `POST` | `/api/auth/register` | Register new user account | No |
-| `POST` | `/api/auth/login` | Login and receive Bearer token | No |
-| `GET` | `/api/auth/me` | Get current authenticated user | Yes (`auth:sanctum`) |
-| `PUT` | `/api/auth/profile` | Update profile information | Yes (`auth:sanctum`) |
-| `POST` | `/api/auth/logout` | Revoke current API token | Yes (`auth:sanctum`) |
+#### Browse & Search Destinations
+- **Endpoint:** `GET /api/travel/places`
+- **Auth:** Public
+- **Query Parameters:**
+  - `search`: Search name, description, address in English & Khmer
+  - `province_id` / `province`: Filter by province
+  - `category_id` / `category`: Filter by category
+  - `min_rating` / `rating`: Filter by minimum rating (e.g., `4.5`)
+  - `price`: Filter by price tier (`Free`, `$5`, etc.)
+  - `featured`: Filter featured (`true`/`false`)
+  - `sort_by`: `popular`, `rating`, `reviews`, `name`, `newest`
+  - `per_page`: Number of results (default `12`)
+  - `page`: Page number
 
-### 2. Places & Attractions
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/places` | List places (filter by category, province, query) | No |
-| `GET` | `/api/places/{id}` | View single place with gallery & reviews | No |
-| `POST` | `/api/places` | Create a new destination | Yes |
-| `PUT` | `/api/places/{id}` | Update destination details | Yes |
-| `DELETE` | `/api/places/{id}` | Delete a destination | Yes |
+#### Destination Details
+- **Endpoint:** `GET /api/travel/places/{id}`
+- **Auth:** Public
+- **Returns:** Full destination details with category, province, opening hours, coordinates, entrance fee, approved reviews, and media gallery.
 
-### 3. Provinces & Categories
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/provinces` | List all provinces | No |
-| `GET` | `/api/provinces/{id}` | View province details & places | No |
-| `POST` | `/api/provinces` | Create province entry | Yes |
-| `GET` | `/api/categories` | List all tourism categories | No |
-| `GET` | `/api/categories/{id}` | View category and associated places | No |
-| `POST` | `/api/categories` | Create category | Yes |
+---
 
-### 4. Events & Festivities
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/events` | List upcoming and past events | No |
-| `GET` | `/api/events/{id}` | Event details with tags | No |
-| `POST` | `/api/events` | Create new event | Yes |
-| `PUT` | `/api/events/{id}` | Update event | Yes |
-| `DELETE` | `/api/events/{id}` | Delete event | Yes |
+### 3. Provinces & Locations
 
-### 5. Reviews & Ratings
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/reviews` | List reviews (filterable by place) | No |
-| `GET` | `/api/reviews/{id}` | Single review with images & replies | No |
-| `POST` | `/api/reviews` | Post a new review with ratings | Yes |
-| `PUT` | `/api/reviews/{id}` | Edit an existing review | Yes |
-| `DELETE` | `/api/reviews/{id}` | Delete a review | Yes |
-| `POST` | `/api/reviews/{id}/replies` | Add official response to review | Yes |
+- `GET /api/travel/provinces`: List all active Cambodian provinces with attraction and event counts.
+- `GET /api/travel/provinces/{id}`: Detailed view of a province with associated tourist destinations and cultural events.
 
-### 6. User Favorites / Wishlist
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/favorites` | List authenticated user's favorites | Yes |
-| `POST` | `/api/favorites` | Add place to favorites | Yes |
-| `DELETE` | `/api/favorites/{placeId}` | Remove place from favorites | Yes |
-| `PATCH` | `/api/favorites/{id}/toggle-visited`| Toggle visited status | Yes |
+---
 
-### 7. Media Gallery
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/galleries` | Explore media gallery items | No |
-| `GET` | `/api/galleries/{id}` | Get single media item | No |
-| `POST` | `/api/galleries` | Upload/register media | Yes |
-| `PUT` | `/api/galleries/{id}` | Update media metadata | Yes |
-| `DELETE` | `/api/galleries/{id}` | Remove media item | Yes |
+### 4. Categories
 
-### 8. Support Chats & Inquiries
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/chats` | List user/admin chat conversations | Yes |
-| `POST` | `/api/chats` | Start a new support thread | Yes |
-| `GET` | `/api/chats/{id}` | Get messages in conversation | Yes |
-| `POST` | `/api/chats/{id}/messages` | Send message in conversation | Yes |
-| `PUT` | `/api/chats/{id}/status` | Update chat status (`Open`, `Resolved`) | Yes |
+- `GET /api/travel/categories`: List tourism categories (Temples, Eco-Tourism, Beaches, Cultural Heritage, Cuisine).
+- `GET /api/travel/categories/{id}`: Category details with associated attractions.
 
-### 9. Gamification, Deletion Requests & Settings
-| Method | Endpoint | Description | Auth Required |
+---
+
+### 5. Events & Festivals
+
+- `GET /api/travel/events`: List events filterable by `status` (`Upcoming`, `Ongoing`, `Past`), `province_id`, `category`, `search`, and date range.
+- `GET /api/travel/events/{id}`: Event details with venue, organizer, dates, and tags.
+
+---
+
+### 6. Media Gallery
+
+- `GET /api/travel/galleries`: Browse photo & video galleries (filterable by `place_id`, `media_type` [`image`, `video`], `tag`, `search`).
+- `GET /api/travel/galleries/{id}`: View single gallery media item with view counter.
+
+---
+
+### 7. Reviews & Ratings
+
+- `GET /api/travel/reviews`: List approved destination reviews (filter by `place_id`, `rating`).
+- `GET /api/travel/reviews/{id}`: View review details with attached images and guide replies.
+- `POST /api/travel/reviews` (`Bearer Token`): Post a review for a destination.
+  ```json
+  {
+    "place_id": 1,
+    "rating": 5,
+    "cleanliness": 5,
+    "value": 4,
+    "accessibility": 5,
+    "hospitality": 5,
+    "title": "Breathtaking experience at sunrise",
+    "comment": "Angkor Wat at dawn is unforgettable. Highly recommend hiring an official guide.",
+    "images": ["https://example.com/photo1.jpg"]
+  }
+  ```
+- `PUT /api/travel/reviews/{id}` (`Bearer Token`): Edit own review.
+- `DELETE /api/travel/reviews/{id}` (`Bearer Token`): Delete own review.
+
+---
+
+### 8. Favorites & Wishlist
+
+- `GET /api/travel/favorites` (`Bearer Token`): Retrieve user's saved wishlist destinations.
+- `POST /api/travel/favorites` (`Bearer Token`):
+  ```json
+  {
+    "place_id": 1,
+    "visited": false
+  }
+  ```
+- `DELETE /api/travel/favorites/{placeId}` (`Bearer Token`): Remove destination from wishlist.
+- `PATCH /api/travel/favorites/{id}/toggle-visited` (`Bearer Token`): Toggle visited status.
+
+---
+
+### 9. Gamification & Achievements
+
+- `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Eco Traveler*, *Cultural Enthusiast*, etc.).
+- `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve authenticated user's unlocked badges and progress.
+
+---
+
+### 10. Live Support Chat
+
+- `GET /api/travel/chats` (`Bearer Token`): List user's support conversations.
+- `POST /api/travel/chats` (`Bearer Token`): Start a new conversation.
+  ```json
+  {
+    "category": "Angkor Pass Inquiry",
+    "priority": "medium",
+    "message": "Can I purchase the Angkor Pass on mobile with QR payment?"
+  }
+  ```
+- `GET /api/travel/chats/{id}` (`Bearer Token`): Get message history for conversation.
+- `POST /api/travel/chats/{id}/messages` (`Bearer Token`): Send message in conversation.
+  ```json
+  {
+    "message": "Thank you for the quick assistance!"
+  }
+  ```
+
+---
+
+### 11. Privacy & Deletion Requests
+
+- `GET /api/travel/deletion-requests` (`Bearer Token`): View status of submitted deletion requests.
+- `POST /api/travel/deletion-requests` (`Bearer Token`): Submit account or item deletion request for admin review.
+  ```json
+  {
+    "request_type": "account",
+    "reason": "I have completed my journey and would like to close my account."
+  }
+  ```
+
+---
+
+### 12. Public App Settings
+
+- `GET /api/travel/settings`: Public application configuration, emergency contacts (Tourist Police, Ambulance, Fire), support emails, and privacy URLs.
+
+---
+
+## 🔒 Admin Management API Reference (`/api/*`)
+
+| Method | Endpoint | Description | Guard / Role |
 |---|---|---|---|
-| `GET` | `/api/achievements` | List all available badges | Yes |
-| `GET` | `/api/users/{userId}/achievements`| List achievements unlocked by user | Yes |
-| `GET` | `/api/deletion-requests` | List user data deletion requests | Yes |
-| `POST` | `/api/deletion-requests` | Submit account/data deletion request | Yes |
-| `GET` | `/api/settings` | Get system configurations & policies | Yes |
-| `GET` | `/api/dashboard/stats` | Aggregate dashboard metrics | No |
+| `GET` | `/api/dashboard` | Dashboard statistical summary | `admin.role` |
+| `GET` | `/api/users` | List and search all users | `admin.role` |
+| `POST` | `/api/users` | Create user with assigned role | `admin.role` |
+| `PUT` | `/api/users/{id}/status` | Update user status (`Active`/`Suspended`) | `admin.role` |
+| `POST` | `/api/places` | Create new tourist destination | `admin.role` |
+| `PUT` | `/api/places/{id}` | Update destination details | `admin.role` |
+| `DELETE` | `/api/places/{id}` | Delete destination | `admin.role` |
+| `POST` | `/api/events` | Create event schedule | `admin.role` |
+| `PUT` | `/api/reviews/{id}/status` | Moderate review (`Approved`/`Rejected`) | `admin.role` |
+| `PUT` | `/api/deletion-requests/{id}/status` | Process account deletion request | `admin.role` |
+| `PUT` | `/api/settings` | Update system-wide configurations | `admin.role` |
 
 ---
 
 ## 📦 Standard API Response Format
 
-All endpoints follow a uniform JSON response structure via `App\Traits\ApiResponse`:
-
-### Success Response
 ```json
 {
   "success": true,
   "message": "Operation completed successfully.",
-  "data": {
-    ...
+  "data": {},
+  "meta": {
+    "total": 50,
+    "per_page": 12,
+    "current_page": 1,
+    "last_page": 5
   }
 }
 ```
 
-### Error Response
+Error response:
 ```json
 {
   "success": false,
-  "message": "Validation error or resource not found.",
+  "message": "Validation failed.",
   "errors": {
-    "field": ["Detailed error message"]
+    "email": ["The email field is required."]
   }
 }
 ```
@@ -226,79 +381,45 @@ All endpoints follow a uniform JSON response structure via `App\Traits\ApiRespon
 
 ## ⚙️ Installation & Setup
 
-### 1. Prerequisites
-- PHP >= 8.2
-- Composer
-- MySQL >= 8.0 or MariaDB
-- Required PHP Extensions: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`
-
-### 2. Clone and Install Dependencies
 ```bash
+# 1. Clone the repository
 git clone https://github.com/TonBunHeng/tourism-backend-api.git
 cd tourism-backend-api
 
+# 2. Install dependencies
 composer install
-```
 
-### 3. Configure Environment
-```bash
+# 3. Environment configuration
 cp .env.example .env
 php artisan key:generate
-```
 
-Edit `.env` to configure your database connection:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=tourism_db
-DB_USERNAME=root
-DB_PASSWORD=
-```
+# 4. Run database migrations & seeders
+php artisan migrate --seed
 
-### 4. Run Migrations & Seed Sample Data
-```bash
-php artisan migrate:fresh --seed
-```
-
-### 5. Start Local Development Server
-```bash
+# 5. Start development server
 php artisan serve
 ```
-The API is now running at `http://127.0.0.1:8000`.
+
+---
+
+## 🧪 Testing
+
+Run the automated PHPUnit test suite covering authentication, destinations, reviews, favorites, support chats, deletion requests, and role authorization:
+
+```bash
+php artisan test
+```
 
 ---
 
 ## 🔑 Default Seeded Accounts
 
-After running `php artisan db:seed`, the following sample users are pre-configured:
-
-| Role | Email | Password | Status |
-|---|---|---|---|
-| **Super Admin** | `admin@tourism.gov.kh` | `password123` | Active / Verified |
-| **Guide / Editor** | `sokha@tourism.gov.kh` | `password123` | Active / Verified |
-
----
-
-## 📁 Project Directory Structure
-
-```text
-tourism-backend-api/
-├── app/
-│   ├── Http/
-│   │   └── Controllers/
-│   │       └── Api/            # REST API Controllers
-│   ├── Models/                 # 18 Eloquent Models
-│   └── Traits/
-│       └── ApiResponse.php     # Standard API Response Trait
-├── database/
-│   ├── migrations/             # 21 Migration files
-│   └── seeders/
-│       └── DatabaseSeeder.php  # Comprehensive dummy data seeder
-├── routes/
-│   └── api.php                 # All RESTful API route definitions
-└── tests/                      # Feature and Unit tests
-```
+| Role | Email | Password |
+|---|---|---|
+| **Super Admin** | `admin@tourism.gov.kh` | `password123` |
+| **Guide / Editor** | `sokha@tourism.gov.kh` | `password123` |
+| **Tourist (User)** | `john.doe@example.com` | `password123` |
+| **Tourist (User)** | `bopha@example.com` | `password123` |
 
 ---
 

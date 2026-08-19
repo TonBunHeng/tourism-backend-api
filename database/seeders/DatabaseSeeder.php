@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
             'two_factor_auth' => true,
             'subscription' => 'Premium',
             'activity_level' => 'High',
-            'bio' => 'Lead Administrator for Smart Tourism Information System.',
+            'bio' => 'Lead Administrator for AngkorVerses Information System.',
         ]);
 
         $guide = User::create([
@@ -405,7 +405,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 12. System Settings
-        SystemSetting::create(['setting_key' => 'site_title', 'setting_value' => 'Smart Tourism Information System', 'setting_group' => 'general', 'description' => 'Main portal header title']);
+        SystemSetting::create(['setting_key' => 'site_title', 'setting_value' => 'AngkorVerses Information System', 'setting_group' => 'general', 'description' => 'Main portal header title']);
         SystemSetting::create(['setting_key' => 'contact_email', 'setting_value' => 'info@tourism.gov.kh', 'setting_group' => 'contact', 'description' => 'Official support contact address']);
         SystemSetting::create(['setting_key' => 'enable_user_reviews', 'setting_value' => 'true', 'setting_group' => 'features', 'description' => 'Allow tourist user review submissions']);
     }

@@ -18,6 +18,10 @@ class User extends Authenticatable
         'email',
         'phone',
         'password_hash',
+        'provider',
+        'provider_id',
+        'provider_email',
+        'email_verified_at',
         'avatar',
         'role',
         'status',
@@ -39,6 +43,7 @@ class User extends Authenticatable
         return [
             'verified' => 'boolean',
             'two_factor_auth' => 'boolean',
+            'email_verified_at' => 'datetime',
             'last_active_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
