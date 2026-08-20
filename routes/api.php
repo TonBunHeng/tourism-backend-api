@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\GalleryController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\ProvinceController;
 use App\Http\Controllers\Api\ReportController;
@@ -97,6 +98,7 @@ Route::prefix('travel')->group(function () {
         Route::put('/auth/profile', [TravelAuthController::class, 'updateProfile']);
         Route::put('/auth/password', [TravelAuthController::class, 'updatePassword']);
         Route::post('/auth/avatar', [TravelAuthController::class, 'uploadAvatar']);
+        Route::delete('/auth/avatar', [TravelAuthController::class, 'deleteAvatar']);
 
         // Tourist Reviews
         Route::post('/reviews', [TravelReviewController::class, 'store']);
@@ -121,6 +123,14 @@ Route::prefix('travel')->group(function () {
         // Tourist Deletion & Privacy Requests
         Route::get('/deletion-requests', [TravelDeletionRequestController::class, 'index']);
         Route::post('/deletion-requests', [TravelDeletionRequestController::class, 'store']);
+
+        // Tourist Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+        Route::delete('/notifications', [NotificationController::class, 'clearAll']);
     });
 });
 
@@ -139,6 +149,7 @@ Route::get('/dashboard/stats', [DashboardController::class, 'index']);
 Route::get('/reports/analytics', [ReportController::class, 'analytics']);
 Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
 Route::get('/reviews/analytics', [ReviewController::class, 'analytics']);
+Route::get('/favorites/analytics', [FavoriteController::class, 'analytics']);
 
 // Public Read-Only Content APIs
 Route::get('/places', [PlaceController::class, 'index']);
@@ -153,6 +164,7 @@ Route::get('/galleries', [GalleryController::class, 'index']);
 Route::get('/galleries/{id}', [GalleryController::class, 'show']);
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{id}', [ReviewController::class, 'show']);
+Route::get('/achievements', [TravelAchievementController::class, 'index']);
 
 // File Upload endpoint
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -162,8 +174,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // User Profile
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/auth/profile', [TravelAuthController::class, 'updateProfile']);
     Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::put('/auth/password', [TravelAuthController::class, 'updatePassword']);
+    Route::post('/auth/avatar', [TravelAuthController::class, 'uploadAvatar']);
+    Route::delete('/auth/avatar', [TravelAuthController::class, 'deleteAvatar']);
 
     // User Favorites & User Chat (Base)
     Route::get('/favorites', [FavoriteController::class, 'index']);
@@ -178,6 +193,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
     Route::post('/deletion-requests', [DeletionRequestController::class, 'store']);
+
+    // Achievements
+    Route::get('/achievements/my', [TravelAchievementController::class, 'myAchievements']);
+
+    // Notifications APIs
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications', [NotificationController::class, 'clearAll']);
 
     // Administrative / Super Admin Management Routes (Guarded by admin.role)
     Route::middleware('admin.role')->group(function () {

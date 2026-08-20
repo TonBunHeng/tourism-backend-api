@@ -169,6 +169,21 @@ class DeletionRequestController extends Controller
 
         $delRequest->load(['user', 'processedBy', 'items']);
 
+        \App\Models\Notification::createNotification([
+            'type' => 'deletion_request',
+            'category' => 'Alerts',
+            'title' => 'Deletion Request Pending Approval',
+            'description' => "User {$user->name} submitted a deletion request: \"{$delRequest->reason}\".",
+            'link' => '/deletion-requests',
+            'read' => false,
+            'data' => [
+                'request_id' => $delRequest->id,
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'urgency' => $delRequest->urgency,
+            ]
+        ]);
+
         return $this->successResponse(new DeletionRequestResource($delRequest), 'Deletion request submitted.', 201);
     }
 

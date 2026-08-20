@@ -39,6 +39,20 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        \App\Models\Notification::createNotification([
+            'type' => 'user',
+            'category' => 'Users',
+            'title' => "New User Registered: {$user->name}",
+            'description' => "{$user->name} ({$user->email}) registered as {$user->role}.",
+            'link' => '/users',
+            'read' => false,
+            'data' => [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+            ]
+        ]);
+
         return $this->successResponse([
             'token' => $token,
             'user' => new UserResource($user),

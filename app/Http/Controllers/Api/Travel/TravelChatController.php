@@ -118,6 +118,21 @@ class TravelChatController extends Controller
 
         $message->load('sender');
 
+        \App\Models\Notification::createNotification([
+            'type' => 'chat',
+            'category' => 'Messages',
+            'title' => "New Support Message from {$user->name}",
+            'description' => "Category: {$chat->category} | \"{$validated['message']}\"",
+            'link' => '/chat',
+            'read' => false,
+            'data' => [
+                'chat_id' => $chat->id,
+                'message_id' => $message->id,
+                'category' => $chat->category,
+                'priority' => $chat->priority,
+            ]
+        ]);
+
         return $this->successResponse(
             new TravelChatMessageResource($message),
             'Message sent successfully.',

@@ -95,6 +95,21 @@ class TravelReviewController extends Controller
 
         $review->load(['user', 'place', 'images', 'replies.user']);
 
+        \App\Models\Notification::createNotification([
+            'type' => 'review',
+            'category' => 'Reviews',
+            'title' => "New {$review->rating}-Star Review on \"{$review->place?->name}\"",
+            'description' => "{$user->name} wrote: \"{$review->title}\" - {$review->comment}",
+            'link' => '/ratings',
+            'read' => false,
+            'data' => [
+                'review_id' => $review->id,
+                'rating' => $review->rating,
+                'place_id' => $review->place_id,
+                'place_name' => $review->place?->name,
+            ]
+        ]);
+
         return $this->successResponse(
             new TravelReviewResource($review),
             'Review submitted successfully and is pending moderation.',

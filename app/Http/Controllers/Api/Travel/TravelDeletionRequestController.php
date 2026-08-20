@@ -58,6 +58,21 @@ class TravelDeletionRequestController extends Controller
 
         $deletionRequest->load('items');
 
+        \App\Models\Notification::createNotification([
+            'type' => 'deletion_request',
+            'category' => 'Alerts',
+            'title' => 'Deletion Request Pending Approval',
+            'description' => "User {$user->name} submitted a deletion request: \"{$deletionRequest->reason}\".",
+            'link' => '/deletion-requests',
+            'read' => false,
+            'data' => [
+                'request_id' => $deletionRequest->id,
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'urgency' => $deletionRequest->urgency,
+            ]
+        ]);
+
         return $this->successResponse(
             new TravelDeletionRequestResource($deletionRequest),
             'Deletion request submitted successfully and is awaiting administrator review.',

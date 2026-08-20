@@ -10,6 +10,7 @@ class FavoriteResource extends JsonResource
     public function toArray(Request $request): array
     {
         $place = $this->relationLoaded('place') ? $this->place : null;
+        $user = $this->relationLoaded('user') ? $this->user : null;
 
         return [
             'id' => $this->id,
@@ -17,6 +18,18 @@ class FavoriteResource extends JsonResource
             'place_id' => $this->place_id,
             'visited' => (bool) $this->visited,
             'saved_date' => $this->saved_date ? $this->saved_date->format('Y-m-d') : ($this->created_at ? $this->created_at->format('Y-m-d') : '2026-08-18'),
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
+                'verified' => (bool) $user->verified,
+                'phone' => $user->phone,
+            ] : null,
+            'user_name' => $user?->name ?? 'Traveler',
+            'user_avatar' => $user?->avatar ?? '',
+            'user_email' => $user?->email ?? '',
             'place' => $place ? new PlaceResource($place) : null,
             'name' => $place?->name ?? 'Attraction',
             'category' => $place?->category?->name ?? 'Attraction',

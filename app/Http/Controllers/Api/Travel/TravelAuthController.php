@@ -3,22 +3,27 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Travel\TravelAvatarUploadRequest;
 use App\Http\Requests\Travel\TravelFacebookLoginRequest;
 use App\Http\Requests\Travel\TravelGoogleLoginRequest;
 use App\Http\Requests\Travel\TravelLoginRequest;
+use App\Http\Requests\Travel\TravelPasswordUpdateRequest;
+use App\Http\Requests\Travel\TravelProfileUpdateRequest;
 use App\Http\Requests\Travel\TravelRegisterRequest;
 use App\Http\Resources\Travel\TravelUserResource;
 use App\Models\User;
-use App\Traits\ApiResponseTrait;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class TravelAuthController extends Controller
 {
-    use ApiResponseTrait;
+    use ApiResponse;
 
     public function register(TravelRegisterRequest $request): JsonResponse
     {
@@ -27,7 +32,10 @@ class TravelAuthController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password_hash' => Hash::make($validated['password']),
+            'phone' => $validated['phone'] ?? null,
+            'location' => $validated['location'] ?? null,
+            'bio' => $validated['bio'] ?? null,
             'role' => 'User',
             'status' => 'Active',
             'verified' => true,
@@ -36,6 +44,20 @@ class TravelAuthController extends Controller
         ]);
 
         $token = $user->createToken('travel_auth_token')->plainTextToken;
+
+        \App\Models\Notification::createNotification([
+            'type' => 'user',
+            'category' => 'Users',
+            'title' => "New User Registered: {$user->name}",
+            'description' => "{$user->name} ({$user->email}) joined AngkorVerses platform.",
+            'link' => '/users',
+            'read' => false,
+            'data' => [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'location' => $user->location,
+            ]
+        ]);
 
         return $this->createdResponse([
             'user' => new TravelUserResource($user),
@@ -50,7 +72,7 @@ class TravelAuthController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (!$user || !Hash::check($validated['password'], $user->password_hash)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
             ]);
@@ -68,6 +90,92 @@ class TravelAuthController extends Controller
             'token' => $token,
             'token_type' => 'Bearer',
         ], 'Login successful.');
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return $this->successResponse(
+            new TravelUserResource($request->user()),
+            'Tourist profile retrieved successfully.'
+        );
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return $this->successResponse(null, 'Logged out successfully.');
+    }
+
+    public function updateProfile(TravelProfileUpdateRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if (isset($validated['address']) && !isset($validated['location'])) {
+            $validated['location'] = $validated['address'];
+        }
+        unset($validated['address']);
+
+        $user->update($validated);
+
+        return $this->successResponse(
+            new TravelUserResource($user),
+            'Profile updated successfully.'
+        );
+    }
+
+    public function updatePassword(TravelPasswordUpdateRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if (!Hash::check($validated['current_password'], $user->password_hash)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The provided current password is incorrect.'],
+            ]);
+        }
+
+        $user->update([
+            'password_hash' => Hash::make($validated['password']),
+        ]);
+
+        return $this->successResponse(null, 'Password updated successfully.');
+    }
+
+    public function uploadAvatar(TravelAvatarUploadRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $file = $request->file('avatar');
+
+        if (!$file || !$file->isValid()) {
+            return $this->errorResponse('Invalid avatar file provided.', 422);
+        }
+
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = 'avatar_' . $user->id . '_' . time() . '_' . Str::random(6) . '.' . $extension;
+
+        $path = $file->storeAs('avatars', $filename, 'public');
+        $url = Storage::disk('public')->url($path);
+        $fullUrl = url($url);
+
+        $user->update(['avatar' => $fullUrl]);
+
+        return $this->successResponse([
+            'avatar' => $fullUrl,
+            'relative_url' => $url,
+            'user' => new TravelUserResource($user),
+        ], 'Avatar uploaded and profile updated successfully.');
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->update(['avatar' => null]);
+
+        return $this->successResponse([
+            'user' => new TravelUserResource($user),
+        ], 'Avatar removed successfully.');
     }
 
     public function googleLogin(TravelGoogleLoginRequest $request): JsonResponse

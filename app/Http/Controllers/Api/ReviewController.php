@@ -209,6 +209,26 @@ class ReviewController extends Controller
         return $this->successResponse(new ReviewResource($review), 'Review updated successfully.');
     }
 
+    public function updateStatus(Request $request, string $id): JsonResponse
+    {
+        $review = Review::find($id);
+
+        if (!$review) {
+            return $this->errorResponse('Review not found.', 404);
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['Approved', 'Pending', 'Rejected', 'Flagged'])],
+        ]);
+
+        $review->update(['status' => $validated['status']]);
+        $this->updatePlaceRating($review->place_id);
+
+        $review->load(['user', 'place', 'images', 'replies.user']);
+
+        return $this->successResponse(new ReviewResource($review), 'Review status updated successfully.');
+    }
+
     public function addReply(Request $request, string $id): JsonResponse
     {
         $review = Review::find($id);
