@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\ProvinceController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\SecurityAlertController;
 use App\Http\Controllers\Api\SystemSettingController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
@@ -136,110 +137,84 @@ Route::prefix('travel')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| 2. EXISTING ADMIN / GENERAL REST API
-| Preserved for tourism-frontend (Admin Web) & Legacy API compatibility
+| 2. ADMIN & MANAGEMENT REST API
+| Consumed by tourism-frontend (Admin Web Panel)
+| Strictly protected with Sanctum Authentication and Admin Role Authorization
 |--------------------------------------------------------------------------
 */
 
-// Public Authentication & Settings & Analytics
+// Public Authentication Endpoints
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
-Route::get('/settings', [SystemSettingController::class, 'index']);
-Route::get('/dashboard/stats', [DashboardController::class, 'index']);
-Route::get('/reports/analytics', [ReportController::class, 'analytics']);
-Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
-Route::get('/reviews/analytics', [ReviewController::class, 'analytics']);
-Route::get('/favorites/analytics', [FavoriteController::class, 'analytics']);
-
-// Public Read-Only Content APIs
-Route::get('/places', [PlaceController::class, 'index']);
-Route::get('/places/{id}', [PlaceController::class, 'show']);
-Route::get('/categories', [CategoryController::class, 'index']);
-Route::get('/categories/{id}', [CategoryController::class, 'show']);
-Route::get('/provinces', [ProvinceController::class, 'index']);
-Route::get('/provinces/{id}', [ProvinceController::class, 'show']);
-Route::get('/events', [EventController::class, 'index']);
-Route::get('/events/{id}', [EventController::class, 'show']);
-Route::get('/galleries', [GalleryController::class, 'index']);
-Route::get('/galleries/{id}', [GalleryController::class, 'show']);
-Route::get('/reviews', [ReviewController::class, 'index']);
-Route::get('/reviews/{id}', [ReviewController::class, 'show']);
-Route::get('/achievements', [TravelAchievementController::class, 'index']);
-
-// File Upload endpoint
-Route::post('/upload', [UploadController::class, 'upload']);
 
 // Protected APIs (Sanctum Auth)
 Route::middleware('auth:sanctum')->group(function () {
-    // User Profile
+
+    // Authenticated User Profile
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::put('/auth/profile', [TravelAuthController::class, 'updateProfile']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
     Route::put('/auth/password', [TravelAuthController::class, 'updatePassword']);
-    Route::post('/auth/avatar', [TravelAuthController::class, 'uploadAvatar']);
-    Route::delete('/auth/avatar', [TravelAuthController::class, 'deleteAvatar']);
+    Route::post('/auth/avatar', [AuthController::class, 'updateAvatar']);
 
-    // User Favorites & User Chat (Base)
-    Route::get('/favorites', [FavoriteController::class, 'index']);
-    Route::post('/favorites', [FavoriteController::class, 'store']);
-    Route::delete('/favorites/{placeId}', [FavoriteController::class, 'destroy']);
-    Route::patch('/favorites/{id}/toggle-visited', [FavoriteController::class, 'toggleVisited']);
-
-    Route::get('/chats', [ChatController::class, 'index']);
-    Route::post('/chats', [ChatController::class, 'store']);
-    Route::get('/chats/{id}', [ChatController::class, 'show']);
-    Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
-
-    Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
-    Route::post('/deletion-requests', [DeletionRequestController::class, 'store']);
-
-    // Achievements
-    Route::get('/achievements/my', [TravelAchievementController::class, 'myAchievements']);
-
-    // Notifications APIs
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
-    Route::delete('/notifications', [NotificationController::class, 'clearAll']);
-
-    // Administrative / Super Admin Management Routes (Guarded by admin.role)
+    // Admin & Management Routes (Guarded by admin.role middleware)
     Route::middleware('admin.role')->group(function () {
-        // Analytics & Reports
+
+        // Analytics & Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/dashboard/stats', [DashboardController::class, 'index']);
+        Route::get('/reports/analytics', [ReportController::class, 'analytics']);
+        Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
+        Route::get('/reviews/analytics', [ReviewController::class, 'analytics']);
+        Route::get('/favorites/analytics', [FavoriteController::class, 'analytics']);
+
+        // File Upload
+        Route::post('/upload', [UploadController::class, 'upload']);
 
         // Places Management
+        Route::get('/places', [PlaceController::class, 'index']);
+        Route::get('/places/{id}', [PlaceController::class, 'show']);
         Route::post('/places', [PlaceController::class, 'store']);
         Route::put('/places/{id}', [PlaceController::class, 'update']);
         Route::delete('/places/{id}', [PlaceController::class, 'destroy']);
 
         // Categories Management
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{id}', [CategoryController::class, 'show']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
         // Provinces Management
+        Route::get('/provinces', [ProvinceController::class, 'index']);
+        Route::get('/provinces/{id}', [ProvinceController::class, 'show']);
         Route::post('/provinces', [ProvinceController::class, 'store']);
         Route::put('/provinces/{id}', [ProvinceController::class, 'update']);
         Route::delete('/provinces/{id}', [ProvinceController::class, 'destroy']);
 
         // Events Management
+        Route::get('/events', [EventController::class, 'index']);
+        Route::get('/events/{id}', [EventController::class, 'show']);
         Route::post('/events', [EventController::class, 'store']);
         Route::put('/events/{id}', [EventController::class, 'update']);
         Route::delete('/events/{id}', [EventController::class, 'destroy']);
 
         // Galleries Management
+        Route::get('/galleries', [GalleryController::class, 'index']);
+        Route::get('/galleries/{id}', [GalleryController::class, 'show']);
         Route::post('/galleries', [GalleryController::class, 'store']);
         Route::put('/galleries/{id}', [GalleryController::class, 'update']);
         Route::delete('/galleries/{id}', [GalleryController::class, 'destroy']);
 
         // Reviews Moderation
+        Route::get('/reviews', [ReviewController::class, 'index']);
+        Route::get('/reviews/{id}', [ReviewController::class, 'show']);
         Route::post('/reviews', [ReviewController::class, 'store']);
         Route::put('/reviews/{id}', [ReviewController::class, 'update']);
         Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
         Route::put('/reviews/{id}/status', [ReviewController::class, 'updateStatus']);
+        Route::post('/reviews/{id}/replies', [ReviewController::class, 'reply']);
 
         // User Management
         Route::get('/users', [UserController::class, 'index']);
@@ -249,10 +224,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
         Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
 
+        // Favorites Admin Inspection
+        Route::get('/favorites', [FavoriteController::class, 'index']);
+        Route::post('/favorites', [FavoriteController::class, 'store']);
+        Route::delete('/favorites/{placeId}', [FavoriteController::class, 'destroy']);
+        Route::patch('/favorites/{id}/toggle-visited', [FavoriteController::class, 'toggleVisited']);
+
         // Chat Admin Management
+        Route::get('/chats', [ChatController::class, 'index']);
+        Route::post('/chats', [ChatController::class, 'store']);
+        Route::get('/chats/{id}', [ChatController::class, 'show']);
+        Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
         Route::put('/chats/{id}/status', [ChatController::class, 'updateStatus']);
 
         // Deletion Requests Admin Moderation
+        Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
+        Route::post('/deletion-requests', [DeletionRequestController::class, 'store']);
         Route::get('/deletion-requests/{id}', [DeletionRequestController::class, 'show']);
         Route::put('/deletion-requests/{id}/status', [DeletionRequestController::class, 'updateStatus']);
 
@@ -262,6 +249,27 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/achievements/{id}/toggle', [UserAchievementController::class, 'toggleUnlocked']);
 
         // System Settings Admin Management
+        Route::get('/settings', [SystemSettingController::class, 'index']);
         Route::put('/settings', [SystemSettingController::class, 'update']);
+
+        // Notifications Admin APIs
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+        Route::delete('/notifications', [NotificationController::class, 'clearAll']);
+
+        // Security Alerts & Audit Logs Management
+        Route::get('/security-alerts', [SecurityAlertController::class, 'index']);
+        Route::get('/security-alerts/export', [SecurityAlertController::class, 'exportData']);
+        Route::get('/security-alerts/login-attempts', [SecurityAlertController::class, 'loginAttempts']);
+        Route::get('/security-alerts/blocked-ips', [SecurityAlertController::class, 'blockedIps']);
+        Route::post('/security-alerts/block-ip', [SecurityAlertController::class, 'blockIp']);
+        Route::post('/security-alerts/unblock-ip', [SecurityAlertController::class, 'unblockIp']);
+        Route::put('/security-alerts/{id}/read', [SecurityAlertController::class, 'markAsRead']);
+        Route::post('/security-alerts/mark-all-read', [SecurityAlertController::class, 'markAllRead']);
+        Route::delete('/security-alerts/{id}', [SecurityAlertController::class, 'destroy']);
+        Route::delete('/security-alerts', [SecurityAlertController::class, 'clearAll']);
     });
 });

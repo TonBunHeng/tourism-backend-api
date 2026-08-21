@@ -17,6 +17,9 @@ use App\Models\Province;
 use App\Models\Review;
 use App\Models\ReviewImage;
 use App\Models\ReviewReply;
+use App\Models\LoginAttempt;
+use App\Models\Notification;
+use App\Models\SecurityAlert;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserAchievement;
@@ -408,5 +411,95 @@ class DatabaseSeeder extends Seeder
         SystemSetting::create(['setting_key' => 'site_title', 'setting_value' => 'AngkorVerses Information System', 'setting_group' => 'general', 'description' => 'Main portal header title']);
         SystemSetting::create(['setting_key' => 'contact_email', 'setting_value' => 'info@tourism.gov.kh', 'setting_group' => 'contact', 'description' => 'Official support contact address']);
         SystemSetting::create(['setting_key' => 'enable_user_reviews', 'setting_value' => 'true', 'setting_group' => 'features', 'description' => 'Allow tourist user review submissions']);
+
+        // 13. Security Alerts & Audit Records
+        SecurityAlert::firstOrCreate(
+            ['email' => 'attacker_bot@185.220.101.5', 'ip_address' => '185.220.101.5'],
+            [
+                'type' => 'failed_login_threshold',
+                'email' => 'attacker_bot@185.220.101.5',
+                'ip_address' => '185.220.101.5',
+                'attempts' => 8,
+                'message' => 'Multiple failed admin login attempts (8) detected for account attacker_bot@185.220.101.5 from IP 185.220.101.5.',
+                'is_read' => false,
+                'data' => [
+                    'email' => 'attacker_bot@185.220.101.5',
+                    'ip_address' => '185.220.101.5',
+                    'attempts' => 8,
+                    'user_agent' => 'Mozilla/5.0 (Hydra/v9.5 Brute-Force Bot)',
+                    'attempted_at' => now()->subMinutes(15)->toIso8601String(),
+                ],
+                'created_at' => now()->subMinutes(15),
+            ]
+        );
+
+        SecurityAlert::firstOrCreate(
+            ['email' => 'admin@tourism.gov.kh', 'ip_address' => '103.216.58.12'],
+            [
+                'type' => 'failed_login_threshold',
+                'email' => 'admin@tourism.gov.kh',
+                'ip_address' => '103.216.58.12',
+                'attempts' => 6,
+                'message' => 'Multiple failed admin login attempts (6) detected for account admin@tourism.gov.kh from IP 103.216.58.12.',
+                'is_read' => false,
+                'data' => [
+                    'email' => 'admin@tourism.gov.kh',
+                    'ip_address' => '103.216.58.12',
+                    'attempts' => 6,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'attempted_at' => now()->subHours(2)->toIso8601String(),
+                ],
+                'created_at' => now()->subHours(2),
+            ]
+        );
+
+        SecurityAlert::firstOrCreate(
+            ['email' => 'unknown_probe@45.154.255.88', 'ip_address' => '45.154.255.88'],
+            [
+                'type' => 'failed_login_threshold',
+                'email' => 'unknown_probe@45.154.255.88',
+                'ip_address' => '45.154.255.88',
+                'attempts' => 6,
+                'message' => 'Multiple failed admin login attempts (6) detected for account unknown_probe@45.154.255.88 from IP 45.154.255.88.',
+                'is_read' => true,
+                'data' => [
+                    'email' => 'unknown_probe@45.154.255.88',
+                    'ip_address' => '45.154.255.88',
+                    'attempts' => 6,
+                    'user_agent' => 'Python-urllib/3.10',
+                    'attempted_at' => now()->subDay()->toIso8601String(),
+                ],
+                'created_at' => now()->subDay(),
+            ]
+        );
+
+        LoginAttempt::firstOrCreate(
+            ['email' => 'attacker_bot@185.220.101.5', 'ip_address' => '185.220.101.5'],
+            [
+                'user_agent' => 'Mozilla/5.0 (Hydra/v9.5 Brute-Force Bot)',
+                'success' => false,
+                'failure_reason' => 'User not found',
+                'attempted_at' => now()->subMinutes(15),
+            ]
+        );
+
+        LoginAttempt::firstOrCreate(
+            ['email' => 'admin@tourism.gov.kh', 'ip_address' => '103.216.58.12'],
+            [
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'success' => false,
+                'failure_reason' => 'Invalid password',
+                'attempted_at' => now()->subHours(2),
+            ]
+        );
+
+        LoginAttempt::firstOrCreate(
+            ['email' => 'admin@tourism.gov.kh', 'ip_address' => '127.0.0.1'],
+            [
+                'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+                'success' => true,
+                'attempted_at' => now()->subMinutes(5),
+            ]
+        );
     }
 }
