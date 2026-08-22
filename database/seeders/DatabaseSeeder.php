@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Users
         $admin = User::create([
-            'name' => 'System Administrator',
+            'name' => 'Ton Bunheng',
             'email' => 'admin@tourism.gov.kh',
             'phone' => '+855 12 345 678',
             'password_hash' => Hash::make('password123'),
@@ -47,9 +47,10 @@ class DatabaseSeeder extends Seeder
             'bio' => 'Lead Administrator for AngkorVerses Information System.',
         ]);
 
+
         $guide = User::create([
-            'name' => 'Sokha Chan',
-            'email' => 'sokha@tourism.gov.kh',
+            'name' => 'Sophal Sopheaktra',
+            'email' => 'sopheaktra@tourism.gov.kh',
             'phone' => '+855 92 888 999',
             'password_hash' => Hash::make('password123'),
             'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
@@ -63,8 +64,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $user1 = User::create([
-            'name' => 'John Doe',
-            'email' => 'john.doe@example.com',
+            'name' => 'VIT Vong',
+            'email' => 'vit.vong@example.com',
             'phone' => '+1 555 123 4567',
             'password_hash' => Hash::make('password123'),
             'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
@@ -78,8 +79,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $user2 = User::create([
-            'name' => 'Bopha Devi',
-            'email' => 'bopha@example.com',
+            'name' => 'Ou Sreylin',
+            'email' => 'ou.sreylin@example.com',
             'phone' => '+855 10 999 000',
             'password_hash' => Hash::make('password123'),
             'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',

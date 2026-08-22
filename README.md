@@ -381,24 +381,45 @@ Error response:
 
 ## ⚙️ Installation & Setup
 
+### Prerequisites
+- **PHP**: ^8.2 or ^8.3 with `pdo`, `mbstring`, `openssl`, `bcmath`, `curl` extensions enabled
+- **Composer**: ^2.0+
+- **Database**: SQLite (default for development) or MySQL ^8.0 / PostgreSQL
+
+### Step-by-Step Backend Setup
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/TonBunHeng/tourism-backend-api.git
 cd tourism-backend-api
 
-# 2. Install dependencies
+# 2. Install PHP dependencies
 composer install
 
-# 3. Environment configuration
+# 3. Create environment file & generate application key
 cp .env.example .env
 php artisan key:generate
 
-# 4. Run database migrations & seeders
+# 4. Create SQLite database file (if using default SQLite connection)
+touch database/database.sqlite
+
+# 5. Run database migrations & seed default data (admin user, categories, places, events)
 php artisan migrate --seed
 
-# 5. Start development server
+# Note: If resetting an existing database and re-seeding default accounts:
+php artisan migrate:fresh --seed
+
+# 6. Start the local backend development server
+# For local machine only (http://127.0.0.1:8000):
 php artisan serve
+
+# For Local LAN access (accessible by mobile devices & other computers using your IP):
+php artisan serve --host=0.0.0.0 --port=8000
+# or:
+composer run serve
 ```
+
+> **Note:** Serving with `--host=0.0.0.0` allows both **Admin Web App (`tourism-frontend`)** and **Travel Client Apps (`tourism-travel` / Mobile App)** on your Local LAN IP (e.g. `http://192.168.x.x:8000`) to connect with identical data and CORS permissions.
 
 ---
 
@@ -414,12 +435,12 @@ php artisan test
 
 ## 🔑 Default Seeded Accounts
 
-| Role | Email | Password |
-|---|---|---|
-| **Super Admin** | `admin@tourism.gov.kh` | `password123` |
-| **Guide / Editor** | `sokha@tourism.gov.kh` | `password123` |
-| **Tourist (User)** | `john.doe@example.com` | `password123` |
-| **Tourist (User)** | `bopha@example.com` | `password123` |
+| Name | Role | Email | Password |
+|---|---|---|---|
+| **Ton Bunheng** | **Super Admin** | `admin@tourism.gov.kh` | `password123` |
+| **Sophal Sopheaktra** | **Guide / Editor** | `sopheaktra@tourism.gov.kh` | `password123` |
+| **VIT Vong** | **Tourist (User)** | `vit.vong@example.com` | `password123` |
+| **Ou Sreylin** | **Tourist (User)** | `ou.sreylin@example.com` | `password123` |
 
 ---
 
