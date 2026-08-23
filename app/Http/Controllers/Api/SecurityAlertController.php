@@ -125,7 +125,18 @@ class SecurityAlertController extends Controller
 
         $alert->delete();
 
-        return $this->successResponse(null, 'Security alert deleted successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Security alert deleted successfully.',
+            'meta' => [
+                'total_alerts' => SecurityAlert::count(),
+                'unread_count' => SecurityAlert::where('is_read', false)->count(),
+                'high_risk_count' => SecurityAlert::where('attempts', '>=', 6)->count(),
+                'total_login_attempts' => LoginAttempt::count(),
+                'failed_attempts' => LoginAttempt::where('success', false)->count(),
+                'blocked_ips_count' => BlockedIp::where('is_active', true)->count(),
+            ]
+        ]);
     }
 
     /**
@@ -133,9 +144,20 @@ class SecurityAlertController extends Controller
      */
     public function clearAll(): JsonResponse
     {
-        SecurityAlert::truncate();
+        SecurityAlert::query()->delete();
 
-        return $this->successResponse(null, 'All security alerts cleared successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'All security alerts cleared successfully.',
+            'meta' => [
+                'total_alerts' => 0,
+                'unread_count' => 0,
+                'high_risk_count' => 0,
+                'total_login_attempts' => LoginAttempt::count(),
+                'failed_attempts' => LoginAttempt::where('success', false)->count(),
+                'blocked_ips_count' => BlockedIp::where('is_active', true)->count(),
+            ]
+        ]);
     }
 
     /**
@@ -209,9 +231,76 @@ class SecurityAlertController extends Controller
             $query->where('success', $request->boolean('success'));
         }
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('email', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%")
+                  ->orWhere('user_agent', 'like', "%{$search}%")
+                  ->orWhere('failure_reason', 'like', "%{$search}%");
+            });
+        }
+
         $attempts = $query->paginate($request->input('per_page', 25));
 
-        return $this->successResponse($attempts, 'Login attempts retrieved successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Login attempts retrieved successfully.',
+            'data' => $attempts->items(),
+            'pagination' => [
+                'current_page' => $attempts->currentPage(),
+                'last_page' => $attempts->lastPage(),
+                'per_page' => $attempts->perPage(),
+                'total' => $attempts->total(),
+            ],
+            'meta' => [
+                'total_login_attempts' => LoginAttempt::count(),
+                'failed_attempts' => LoginAttempt::where('success', false)->count(),
+                'successful_attempts' => LoginAttempt::where('success', true)->count(),
+            ]
+        ]);
+    }
+
+    /**
+     * Delete a single login attempt log.
+     */
+    public function destroyLoginAttempt($id): JsonResponse
+    {
+        $attempt = LoginAttempt::find($id);
+
+        if (!$attempt) {
+            return $this->errorResponse('Login attempt log not found.', 404);
+        }
+
+        $attempt->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login attempt log deleted successfully.',
+            'meta' => [
+                'total_login_attempts' => LoginAttempt::count(),
+                'failed_attempts' => LoginAttempt::where('success', false)->count(),
+                'successful_attempts' => LoginAttempt::where('success', true)->count(),
+            ]
+        ]);
+    }
+
+    /**
+     * Clear all login attempt logs.
+     */
+    public function clearLoginAttempts(): JsonResponse
+    {
+        LoginAttempt::query()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'All login attempt logs cleared successfully.',
+            'meta' => [
+                'total_login_attempts' => 0,
+                'failed_attempts' => 0,
+                'successful_attempts' => 0,
+            ]
+        ]);
     }
 
     /**

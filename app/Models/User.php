@@ -102,5 +102,67 @@ class User extends Authenticatable
     {
         return $this->hasMany(Notification::class, 'user_id');
     }
+
+    public function galleryComments()
+    {
+        return $this->hasMany(GalleryComment::class, 'user_id');
+    }
+
+    public function galleryLikes()
+    {
+        return $this->hasMany(GalleryLike::class, 'user_id');
+    }
+
+    public function isOnline(): bool
+    {
+        if (!$this->last_active_at) {
+            return false;
+        }
+
+        return $this->last_active_at->greaterThanOrEqualTo(now()->subMinutes(5));
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return strtolower(trim($this->role ?? '')) === 'super admin';
+    }
+
+    public function isAdmin(): bool
+    {
+        $role = strtolower(trim($this->role ?? ''));
+        return in_array($role, ['super admin', 'admin'], true);
+    }
+
+    public function canModerate(): bool
+    {
+        $role = strtolower(trim($this->role ?? ''));
+        return in_array($role, ['super admin', 'admin', 'guide / editor'], true);
+    }
+
+    public function getOnlineStatusAttribute(): string
+    {
+        if ($this->isOnline()) {
+            return 'Online Now';
+        }
+
+        if ($this->last_active_at) {
+            return $this->last_active_at->diffForHumans();
+        }
+
+        return 'Offline';
+    }
+
+    public function getLastActiveHumanAttribute(): string
+    {
+        if ($this->isOnline()) {
+            return 'Online Now';
+        }
+
+        if ($this->last_active_at) {
+            return $this->last_active_at->diffForHumans();
+        }
+
+        return 'Never';
+    }
 }
 

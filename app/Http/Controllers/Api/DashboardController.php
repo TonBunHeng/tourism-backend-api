@@ -35,10 +35,11 @@ class DashboardController extends Controller
         $avgPlaceRating = Place::avg('rating');
         $averageRating = $avgReviewRating ?: ($avgPlaceRating ?: 4.8);
 
-        // User status counts
+        // User status & active tracking counts
         $activeUsers = User::where('status', 'Active')->count();
         $inactiveUsers = User::where('status', 'Inactive')->count();
         $suspendedUsers = User::where('status', 'Suspended')->count();
+        $onlineUsers = User::where('last_active_at', '>=', now()->subMinutes(5))->count();
         $newThisWeek = User::where('created_at', '>=', now()->subDays(7))->count();
 
         // Top places by rating and reviews
@@ -170,6 +171,7 @@ class DashboardController extends Controller
                 'avg_rating' => round((float)$averageRating, 1),
                 'average_rating' => round((float)$averageRating, 1),
                 'active_users' => $activeUsers,
+                'online_users' => $onlineUsers,
                 'inactive_users' => $inactiveUsers,
                 'suspended_users' => $suspendedUsers,
                 'new_this_week' => $newThisWeek,
@@ -181,6 +183,7 @@ class DashboardController extends Controller
             'user_growth' => $userGrowth,
             'user_status' => [
                 'active' => $activeUsers,
+                'online' => $onlineUsers,
                 'inactive' => $inactiveUsers,
                 'suspended' => $suspendedUsers,
                 'new_this_week' => $newThisWeek,

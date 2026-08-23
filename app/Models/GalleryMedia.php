@@ -62,4 +62,31 @@ class GalleryMedia extends Model
     {
         return $this->hasMany(GalleryMediaTag::class, 'media_id');
     }
+
+    public function comments()
+    {
+        return $this->hasMany(GalleryComment::class, 'gallery_media_id')
+            ->whereNull('parent_id')
+            ->with(['user', 'replies'])
+            ->orderBy('created_at', 'desc');
+    }
+
+    public function allComments()
+    {
+        return $this->hasMany(GalleryComment::class, 'gallery_media_id');
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(GalleryLike::class, 'gallery_media_id');
+    }
+
+    public function isLikedBy(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        return $this->likes()->where('user_id', $user->id)->exists();
+    }
 }

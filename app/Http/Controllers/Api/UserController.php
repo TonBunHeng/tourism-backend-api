@@ -35,11 +35,18 @@ class UserController extends Controller
             $query->where('status', $status);
         }
 
+        if ($request->boolean('online') || $request->query('filter') === 'online') {
+            $query->where('last_active_at', '>=', now()->subMinutes(5));
+        }
+
         $perPage = (int) $request->query('per_page', 15);
         $users = $query->orderBy('id', 'desc')->paginate($perPage);
 
+        $onlineUsersCount = User::where('last_active_at', '>=', now()->subMinutes(5))->count();
+
         return $this->successResponse(UserResource::collection($users), 'Users retrieved successfully.', 200, [
             'total' => $users->total(),
+            'online_users' => $onlineUsersCount,
             'per_page' => $users->perPage(),
             'current_page' => $users->currentPage(),
             'last_page' => $users->lastPage(),
@@ -124,5 +131,32 @@ class UserController extends Controller
         $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully.');
+    }
+
+    /**
+     * Get real-time user online and active tracking metrics.
+     */
+    public function activeStatus(): JsonResponse
+    {
+        $totalUsers = User::count();
+        $onlineUsers = User::where('last_active_at', '>=', now()->subMinutes(5))->count();
+        $activeUsers = User::where('status', 'Active')->count();
+        $inactiveUsers = User::where('status', 'Inactive')->count();
+        $suspendedUsers = User::where('status', 'Suspended')->count();
+
+        $recentOnline = User::where('last_active_at', '>=', now()->subMinutes(60))
+            ->orderBy('last_active_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return $this->successResponse([
+            'total_users' => $totalUsers,
+            'online_users' => $onlineUsers,
+            'offline_users' => max(0, $totalUsers - $onlineUsers),
+            'active_users' => $activeUsers,
+            'inactive_users' => $inactiveUsers,
+            'suspended_users' => $suspendedUsers,
+            'recent_online_users' => UserResource::collection($recentOnline),
+        ], 'User active status metrics retrieved successfully.');
     }
 }

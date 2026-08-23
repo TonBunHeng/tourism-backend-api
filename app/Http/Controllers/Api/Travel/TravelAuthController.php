@@ -11,6 +11,8 @@ use App\Http\Requests\Travel\TravelPasswordUpdateRequest;
 use App\Http\Requests\Travel\TravelProfileUpdateRequest;
 use App\Http\Requests\Travel\TravelRegisterRequest;
 use App\Http\Resources\Travel\TravelUserResource;
+use App\Models\BlockedIp;
+use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -70,17 +72,66 @@ class TravelAuthController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::where('email', $validated['email'])->first();
+        $email = strtolower(trim($validated['email']));
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
+
+        if ($ip && BlockedIp::isBlocked($ip)) {
+            LoginAttempt::create([
+                'email' => $email,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'success' => false,
+                'failure_reason' => 'Access Denied: IP address blocked by administrator',
+                'attempted_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'IP_BLOCKED',
+                'message' => "Access Denied: Your IP address ({$ip}) has been blocked by system administrators.",
+                'ip_blocked' => true,
+                'ip' => $ip,
+            ], 403);
+        }
+
+        $user = User::where('email', $email)->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password_hash)) {
+            LoginAttempt::create([
+                'email' => $email,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'success' => false,
+                'failure_reason' => !$user ? 'User not found' : 'Invalid password',
+                'attempted_at' => now(),
+            ]);
+
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
             ]);
         }
 
         if ($user->status !== 'Active') {
+            LoginAttempt::create([
+                'email' => $email,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'success' => false,
+                'failure_reason' => 'Account ' . strtolower($user->status),
+                'attempted_at' => now(),
+            ]);
+
             return $this->errorResponse('Your account is currently ' . strtolower($user->status) . '. Please contact support.', 403);
         }
+
+        LoginAttempt::create([
+            'email' => $email,
+            'ip_address' => $ip,
+            'user_agent' => $userAgent,
+            'success' => true,
+            'attempted_at' => now(),
+        ]);
 
         $user->update(['last_active_at' => now()]);
         $token = $user->createToken('travel_auth_token')->plainTextToken;

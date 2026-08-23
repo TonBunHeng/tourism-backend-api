@@ -79,6 +79,10 @@ Route::prefix('travel')->group(function () {
     // 1.6 Public Gallery / Media
     Route::get('/galleries', [TravelGalleryController::class, 'index']);
     Route::get('/galleries/{id}', [TravelGalleryController::class, 'show']);
+    Route::post('/galleries/{id}/view', [TravelGalleryController::class, 'recordView']);
+    Route::post('/galleries/{id}/views', [TravelGalleryController::class, 'recordView']);
+    Route::get('/galleries/{id}/comments', [TravelGalleryController::class, 'comments']);
+    Route::get('/galleries/{id}/stream', [TravelGalleryController::class, 'stream']);
 
     // 1.7 Public Reviews
     Route::get('/reviews', [TravelReviewController::class, 'index']);
@@ -101,6 +105,14 @@ Route::prefix('travel')->group(function () {
         Route::post('/auth/avatar', [TravelAuthController::class, 'uploadAvatar']);
         Route::delete('/auth/avatar', [TravelAuthController::class, 'deleteAvatar']);
 
+        // Tourist Gallery Interactions (Requires Authentication)
+        Route::post('/galleries/{id}/comments', [TravelGalleryController::class, 'storeComment']);
+        Route::post('/galleries/{id}/replies', [TravelGalleryController::class, 'storeComment']);
+        Route::delete('/galleries/comments/{commentId}', [TravelGalleryController::class, 'deleteComment']);
+        Route::delete('/galleries/{id}/comments/{commentId}', [TravelGalleryController::class, 'deleteComment']);
+        Route::post('/galleries/{id}/like', [TravelGalleryController::class, 'toggleLike']);
+        Route::post('/galleries/{id}/likes', [TravelGalleryController::class, 'toggleLike']);
+
         // Tourist Reviews
         Route::post('/reviews', [TravelReviewController::class, 'store']);
         Route::put('/reviews/{id}', [TravelReviewController::class, 'update']);
@@ -109,6 +121,8 @@ Route::prefix('travel')->group(function () {
         // Tourist Favorites / Wishlist
         Route::get('/favorites', [TravelFavoriteController::class, 'index']);
         Route::post('/favorites', [TravelFavoriteController::class, 'store']);
+        Route::post('/favorites/toggle', [TravelFavoriteController::class, 'toggle']);
+        Route::post('/favorites/toggle/{placeId}', [TravelFavoriteController::class, 'toggle']);
         Route::delete('/favorites/{placeId}', [TravelFavoriteController::class, 'destroy']);
         Route::patch('/favorites/{id}/toggle-visited', [TravelFavoriteController::class, 'toggleVisited']);
 
@@ -216,8 +230,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/reviews/{id}/status', [ReviewController::class, 'updateStatus']);
         Route::post('/reviews/{id}/replies', [ReviewController::class, 'reply']);
 
-        // User Management
+        // User Management & Activity Tracking
         Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/active-status', [UserController::class, 'activeStatus']);
         Route::post('/users', [UserController::class, 'store']);
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
@@ -264,6 +279,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/security-alerts', [SecurityAlertController::class, 'index']);
         Route::get('/security-alerts/export', [SecurityAlertController::class, 'exportData']);
         Route::get('/security-alerts/login-attempts', [SecurityAlertController::class, 'loginAttempts']);
+        Route::delete('/security-alerts/login-attempts/{id}', [SecurityAlertController::class, 'destroyLoginAttempt']);
+        Route::delete('/security-alerts/login-attempts', [SecurityAlertController::class, 'clearLoginAttempts']);
         Route::get('/security-alerts/blocked-ips', [SecurityAlertController::class, 'blockedIps']);
         Route::post('/security-alerts/block-ip', [SecurityAlertController::class, 'blockIp']);
         Route::post('/security-alerts/unblock-ip', [SecurityAlertController::class, 'unblockIp']);

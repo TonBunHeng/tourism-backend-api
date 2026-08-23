@@ -11,6 +11,16 @@ class TravelFavoriteRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $placeId = $this->input('place_id') ?? $this->input('placeId') ?? $this->input('id');
+        if ($placeId !== null) {
+            $this->merge([
+                'place_id' => (int) $placeId,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [

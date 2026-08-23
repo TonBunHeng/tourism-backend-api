@@ -86,6 +86,35 @@ class AuthController extends Controller
                 'attempted_at' => now(),
             ]);
 
+            SecurityAlert::create([
+                'type' => 'blocked_ip_attempt',
+                'email' => $email,
+                'ip_address' => $ip,
+                'attempts' => 1,
+                'message' => "Access Denied: Blocked IP address ({$ip}) attempted login for account {$email}.",
+                'is_read' => false,
+                'data' => [
+                    'email' => $email,
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                    'attempted_at' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Notification::createNotification([
+                'type' => 'alert',
+                'category' => 'Security',
+                'title' => 'Security Violation: Blocked IP Login Attempt',
+                'description' => "Blocked IP address ({$ip}) attempted to log in using account {$email}.",
+                'link' => '/notifications',
+                'read' => false,
+                'data' => [
+                    'type' => 'blocked_ip_attempt',
+                    'email' => $email,
+                    'ip_address' => $ip,
+                ],
+            ]);
+
             return response()->json([
                 'success' => false,
                 'error' => 'IP_BLOCKED',
@@ -109,13 +138,15 @@ class AuthController extends Controller
         if (!$user || !Hash::check($validated['password'], $user->password_hash)) {
             RateLimiter::hit($throttleKey, 300);
 
+            $failureReason = !$user ? 'User not found' : 'Invalid password';
+
             // Record failed attempt
             LoginAttempt::create([
                 'email' => $email,
                 'ip_address' => $ip,
                 'user_agent' => $userAgent,
                 'success' => false,
-                'failure_reason' => !$user ? 'User not found' : 'Invalid password',
+                'failure_reason' => $failureReason,
                 'attempted_at' => now(),
             ]);
 
@@ -125,26 +156,30 @@ class AuthController extends Controller
                 ->where('attempted_at', '>=', now()->subMinutes(30))
                 ->count();
 
-            // At 6 or more failed attempts, create a security alert and admin notification
-            if ($recentFailedCount >= 6) {
-                $alertMessage = "Multiple failed admin login attempts ({$recentFailedCount}) detected for account {$email} from IP {$ip}.";
+            $alertType = $recentFailedCount >= 6 ? 'failed_login_threshold' : 'failed_login';
+            $alertMessage = $recentFailedCount >= 6
+                ? "Multiple failed admin login attempts ({$recentFailedCount}) detected for account {$email} from IP {$ip}."
+                : "Failed login attempt detected for account {$email} from IP {$ip} ({$failureReason}).";
 
-                SecurityAlert::create([
-                    'type' => 'failed_login_threshold',
+            SecurityAlert::create([
+                'type' => $alertType,
+                'email' => $email,
+                'ip_address' => $ip,
+                'attempts' => $recentFailedCount,
+                'message' => $alertMessage,
+                'is_read' => false,
+                'data' => [
                     'email' => $email,
                     'ip_address' => $ip,
-                    'attempts' => $recentFailedCount,
-                    'message' => $alertMessage,
-                    'is_read' => false,
-                    'data' => [
-                        'email' => $email,
-                        'ip_address' => $ip,
-                        'user_agent' => $userAgent,
-                        'attempted_at' => now()->toIso8601String(),
-                        'total_failures' => $recentFailedCount,
-                    ],
-                ]);
+                    'user_agent' => $userAgent,
+                    'attempted_at' => now()->toIso8601String(),
+                    'total_failures' => $recentFailedCount,
+                    'reason' => $failureReason,
+                ],
+            ]);
 
+            // At 6 or more failed attempts, create an urgent security notification
+            if ($recentFailedCount >= 6) {
                 Notification::createNotification([
                     'type' => 'alert',
                     'category' => 'Security',
@@ -174,6 +209,22 @@ class AuthController extends Controller
                 'failure_reason' => 'Account ' . strtolower($user->status),
                 'attempted_at' => now(),
             ]);
+
+            SecurityAlert::create([
+                'type' => 'inactive_account_login',
+                'email' => $email,
+                'ip_address' => $ip,
+                'attempts' => 1,
+                'message' => "Login attempt blocked: Account {$email} is " . strtolower($user->status) . ".",
+                'is_read' => false,
+                'data' => [
+                    'email' => $email,
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                    'status' => $user->status,
+                ],
+            ]);
+
             return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
@@ -188,6 +239,39 @@ class AuthController extends Controller
                 'failure_reason' => 'Unauthorized role for admin panel: ' . $user->role,
                 'attempted_at' => now(),
             ]);
+
+            SecurityAlert::create([
+                'type' => 'unauthorized_access',
+                'email' => $email,
+                'ip_address' => $ip,
+                'attempts' => 1,
+                'message' => "Unauthorized Admin Access Attempt: User account {$email} with role '{$user->role}' attempted to log into web admin from IP {$ip}.",
+                'is_read' => false,
+                'data' => [
+                    'email' => $email,
+                    'user_id' => $user->id,
+                    'role' => $user->role,
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                    'attempted_at' => now()->toIso8601String(),
+                ],
+            ]);
+
+            Notification::createNotification([
+                'type' => 'alert',
+                'category' => 'Security',
+                'title' => 'Security Alert: Unauthorized Admin Access Attempt',
+                'description' => "User {$email} ({$user->role}) attempted to access Web Admin from IP {$ip}.",
+                'link' => '/notifications',
+                'read' => false,
+                'data' => [
+                    'type' => 'unauthorized_access',
+                    'email' => $email,
+                    'role' => $user->role,
+                    'ip_address' => $ip,
+                ],
+            ]);
+
             return $this->errorResponse('Access denied. Administrator privileges required.', 403);
         }
 
@@ -198,6 +282,23 @@ class AuthController extends Controller
             'user_agent' => $userAgent,
             'success' => true,
             'attempted_at' => now(),
+        ]);
+
+        SecurityAlert::create([
+            'type' => 'successful_login',
+            'email' => $email,
+            'ip_address' => $ip,
+            'attempts' => 1,
+            'message' => "Admin Login Event: User account {$email} ({$user->role}) successfully logged into web admin from IP {$ip}.",
+            'is_read' => true,
+            'data' => [
+                'email' => $email,
+                'user_id' => $user->id,
+                'role' => $user->role,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'logged_in_at' => now()->toIso8601String(),
+            ],
         ]);
 
         RateLimiter::clear($throttleKey);

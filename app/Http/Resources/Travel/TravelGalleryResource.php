@@ -12,6 +12,19 @@ class TravelGalleryResource extends JsonResource
         $catName = $this->relationLoaded('category') ? $this->category?->name : null;
         $placeName = $this->relationLoaded('place') ? $this->place?->name : null;
 
+        $user = $request->user();
+        $isLiked = false;
+        if ($user && method_exists($this->resource, 'isLikedBy')) {
+            $isLiked = $this->isLikedBy($user);
+        }
+
+        $commentsCount = $this->relationLoaded('allComments')
+            ? $this->allComments->count()
+            : (int) ($this->all_comments_count ?? $this->comments()->count());
+
+        $views = (int) ($this->views_count ?? 0);
+        $likes = (int) ($this->likes_count ?? 0);
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -24,9 +37,21 @@ class TravelGalleryResource extends JsonResource
             'category' => $catName,
             'place_id' => $this->place_id,
             'place' => $placeName,
-            'views_count' => (int) ($this->views_count ?? 0),
-            'view_count' => (int) ($this->views_count ?? 0),
-            'likes_count' => (int) ($this->likes_count ?? 0),
+            'views_count' => $views,
+            'view_count' => $views,
+            'views' => $views,
+            'likes_count' => $likes,
+            'like_count' => $likes,
+            'likes' => $likes,
+            'is_liked' => $isLiked,
+            'isLiked' => $isLiked,
+            'liked' => $isLiked,
+            'comments_count' => $commentsCount,
+            'comment_count' => $commentsCount,
+            'commentsCount' => $commentsCount,
+            'comments' => $this->relationLoaded('comments')
+                ? TravelGalleryCommentResource::collection($this->comments)
+                : [],
             'tags' => $this->relationLoaded('tags') ? $this->tags->pluck('tag_name')->toArray() : [],
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,

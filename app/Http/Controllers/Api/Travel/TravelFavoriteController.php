@@ -74,6 +74,43 @@ class TravelFavoriteController extends Controller
         return $this->successResponse(null, 'Removed from favorites successfully.');
     }
 
+    public function toggle(Request $request, ?string $placeId = null): JsonResponse
+    {
+        $user = $request->user();
+        $targetPlaceId = $placeId ?? $request->input('place_id') ?? $request->input('placeId') ?? $request->input('id');
+
+        if (!$targetPlaceId) {
+            return $this->errorResponse('Destination place_id is required.', 422);
+        }
+
+        $existing = Favorite::where('user_id', $user->id)
+            ->where('place_id', $targetPlaceId)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            return $this->successResponse([
+                'place_id' => (int) $targetPlaceId,
+                'is_favorite' => false,
+            ], 'Removed from favorites successfully.');
+        }
+
+        $favorite = Favorite::create([
+            'user_id' => $user->id,
+            'place_id' => $targetPlaceId,
+            'visited' => false,
+            'saved_date' => now()->toDateString(),
+        ]);
+
+        $favorite->load(['place.category', 'place.province']);
+
+        return $this->successResponse([
+            'place_id' => (int) $targetPlaceId,
+            'is_favorite' => true,
+            'favorite' => new TravelFavoriteResource($favorite),
+        ], 'Destination saved to favorites successfully.');
+    }
+
     public function toggleVisited(Request $request, string $id): JsonResponse
     {
         $user = $request->user();

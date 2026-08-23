@@ -145,10 +145,30 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
+        $baseQuery = Notification::query();
+        if (!$isAdmin) {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('user_id')
+                          ->whereIn('category', ['System', 'Events', 'Offers', 'General']);
+                  });
+            });
+        } else {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->whereNull('user_id')
+                  ->orWhere('user_id', $user->id);
+            });
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Notification marked as read.',
             'data' => $notification,
+            'meta' => [
+                'total' => (clone $baseQuery)->count(),
+                'unread_count' => (clone $baseQuery)->where('read', false)->count(),
+            ],
         ]);
     }
 
@@ -175,9 +195,29 @@ class NotificationController extends Controller
             'read_at' => now(),
         ]);
 
+        $baseQuery = Notification::query();
+        if (!$isAdmin) {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('user_id')
+                          ->whereIn('category', ['System', 'Events', 'Offers', 'General']);
+                  });
+            });
+        } else {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->whereNull('user_id')
+                  ->orWhere('user_id', $user->id);
+            });
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'All notifications marked as read.',
+            'meta' => [
+                'total' => (clone $baseQuery)->count(),
+                'unread_count' => 0,
+            ],
         ]);
     }
 
@@ -205,9 +245,29 @@ class NotificationController extends Controller
 
         $notification->delete();
 
+        $baseQuery = Notification::query();
+        if (!$isAdmin) {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('user_id')
+                          ->whereIn('category', ['System', 'Events', 'Offers', 'General']);
+                  });
+            });
+        } else {
+            $baseQuery->where(function ($q) use ($user) {
+                $q->whereNull('user_id')
+                  ->orWhere('user_id', $user->id);
+            });
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Notification deleted successfully.',
+            'meta' => [
+                'total' => (clone $baseQuery)->count(),
+                'unread_count' => (clone $baseQuery)->where('read', false)->count(),
+            ],
         ]);
     }
 
@@ -234,6 +294,10 @@ class NotificationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'All notifications cleared successfully.',
+            'meta' => [
+                'total' => 0,
+                'unread_count' => 0,
+            ],
         ]);
     }
 }

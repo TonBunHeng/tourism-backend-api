@@ -16,9 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
             'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
+            'update.user.activity' => \App\Http\Middleware\UpdateUserActivity::class,
         ]);
         $middleware->api(prepend: [
             \App\Http\Middleware\CheckBlockedIp::class,
+            \App\Http\Middleware\UpdateUserActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
