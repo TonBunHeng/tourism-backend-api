@@ -43,6 +43,7 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
   - [10. Live Support Chat](#10-live-support-chat)
   - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
   - [12. Public App Settings](#12-public-app-settings)
+  - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
 - [Admin Management API Reference (`/api/*`)](#-admin-management-api-reference-api)
 - [Standard API Response Format](#-standard-api-response-format)
 - [Installation & Setup](#-installation--setup)
@@ -329,6 +330,73 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 ### 12. Public App Settings
 
 - `GET /api/travel/settings`: Public application configuration, emergency contacts (Tourist Police, Ambulance, Fire), support emails, and privacy URLs.
+
+---
+
+### 13. AI Assistant & Tourism Intelligence
+
+Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.vercel.app/`).
+
+#### 🤖 AI Tourism Chat Assistant
+- **Endpoint:** `POST /api/travel/ai/chat` (or `POST /api/travel/ai-chat`)
+- **Auth:** Public / Bearer Token
+- **Request Body:**
+  ```json
+  {
+    "message": "What are the best temples to visit for sunrise in Siem Reap?",
+    "session_id": "optional_session_id",
+    "province": "Siem Reap",
+    "category": "Temples & Heritage",
+    "language": "en"
+  }
+  ```
+- **Returns:** Intelligent response powered by Gemini AI with verified Cambodian landmarks, local practical tips, and suggested follow-up questions.
+
+#### 🌟 Smart Recommendations
+- **Endpoint:** `POST /api/travel/ai/recommendations` (or `POST /api/travel/recommendations`)
+- **Request Body:**
+  ```json
+  {
+    "province": "Siem Reap",
+    "category": "Historical",
+    "budget": "moderate",
+    "travel_style": "cultural",
+    "interests": ["temples", "history", "photography"]
+  }
+  ```
+
+#### 🗓️ Day-by-Day Smart Itinerary Generator
+- **Endpoint:** `POST /api/travel/ai/itineraries` (or `POST /api/travel/itineraries`)
+- **Request Body:**
+  ```json
+  {
+    "province": "Siem Reap",
+    "days": 3,
+    "budget": "moderate",
+    "travel_style": "cultural"
+  }
+  ```
+
+#### ☀️ Live Weather & Travel Suitability Advice
+- **Endpoint:** `GET /api/travel/ai/weather?province=Siem+Reap&days=3`
+- **Returns:** Real-time temperature, precipitation risk, forecast, and tailored travel advice in both English and Khmer.
+
+#### 💱 Currency Reference & Converter
+- **Get Rate:** `GET /api/travel/ai/currency`
+- **Convert:** `POST /api/travel/ai/currency/convert`
+  ```json
+  {
+    "amount": 25,
+    "from_currency": "USD",
+    "to_currency": "KHR"
+  }
+  ```
+
+#### 🚗 Transit & Transport Estimator
+- **Endpoint:** `GET /api/travel/ai/transport?origin=Phnom+Penh&destination=Siem+Reap&travelers=2`
+
+#### 🩺 AI System Status
+- **Endpoint:** `GET /api/travel/ai/status` (or `GET /api/ai/status`)
 
 ---
 

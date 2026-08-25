@@ -19,3 +19,4 @@ Route::get('/', function () {
 // OAuth 2.0 Socialite Routes
 Route::get('/auth/google/redirect', [TravelOAuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
 Route::get('/auth/google/callback', [TravelOAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+

@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\Travel\TravelAchievementController;
+use App\Http\Controllers\Api\Travel\TravelAiChatController;
 use App\Http\Controllers\Api\Travel\TravelAuthController;
 use App\Http\Controllers\Api\Travel\TravelCategoryController;
 use App\Http\Controllers\Api\Travel\TravelChatController;
@@ -45,6 +46,11 @@ Route::get('/health', function () {
         'timestamp' => now()->toIso8601String(),
     ]);
 });
+
+Route::post('/chat', [TravelAiChatController::class, 'chat']);
+Route::post('/ai/chat', [TravelAiChatController::class, 'chat']);
+Route::get('/ai/status', [TravelAiChatController::class, 'status']);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -94,7 +100,27 @@ Route::prefix('travel')->group(function () {
     // 1.9 Public Safe System Settings
     Route::get('/settings', [TravelSettingController::class, 'index']);
 
-    // 1.10 Authenticated Tourist Endpoints (Sanctum Auth)
+    // 1.10 AI Assistant & Tourism Intelligence (Powered by Angkor Verse AI)
+    Route::post('/ai/chat', [TravelAiChatController::class, 'chat']);
+    Route::post('/ai-chat', [TravelAiChatController::class, 'chat']);
+    Route::post('/ai/recommendations', [TravelAiChatController::class, 'recommendations']);
+    Route::post('/recommendations', [TravelAiChatController::class, 'recommendations']);
+    Route::post('/ai/itineraries', [TravelAiChatController::class, 'itineraries']);
+    Route::post('/itineraries', [TravelAiChatController::class, 'itineraries']);
+    Route::get('/ai/weather', [TravelAiChatController::class, 'weather']);
+    Route::get('/weather', [TravelAiChatController::class, 'weather']);
+    Route::get('/ai/events', [TravelAiChatController::class, 'events']);
+    Route::get('/ai/currency', [TravelAiChatController::class, 'currency']);
+    Route::get('/currency', [TravelAiChatController::class, 'currency']);
+    Route::post('/ai/currency/convert', [TravelAiChatController::class, 'convertCurrency']);
+    Route::post('/currency/convert', [TravelAiChatController::class, 'convertCurrency']);
+    Route::get('/ai/transport', [TravelAiChatController::class, 'transport']);
+    Route::get('/transport', [TravelAiChatController::class, 'transport']);
+    Route::post('/ai/search', [TravelAiChatController::class, 'search']);
+    Route::post('/ai/summary', [TravelAiChatController::class, 'summary']);
+    Route::get('/ai/status', [TravelAiChatController::class, 'status']);
+
+    // 1.11 Authenticated Tourist Endpoints (Sanctum Auth)
     Route::middleware('auth:sanctum')->group(function () {
 
         // Tourist Profile & Password Management

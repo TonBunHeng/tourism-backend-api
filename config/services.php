@@ -47,4 +47,10 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI'),
     ],
 
+    'ai_chat' => [
+        'url' => env('AI_CHAT_API_URL', 'https://aichat-backend-pi.vercel.app'),
+        'timeout' => env('AI_CHAT_TIMEOUT', 30),
+    ],
+
+
 ];
