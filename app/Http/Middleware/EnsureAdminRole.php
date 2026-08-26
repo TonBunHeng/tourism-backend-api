@@ -25,6 +25,10 @@ class EnsureAdminRole
             return $this->errorResponse('Unauthenticated.', 401);
         }
 
+        if ($user->status !== 'Active') {
+            return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
+        }
+
         $allowedRoles = !empty($roles) ? $roles : ['Super Admin', 'Admin', 'Guide / Editor'];
 
         if (!in_array($user->role, $allowedRoles, true)) {

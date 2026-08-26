@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\EventController;
@@ -270,13 +269,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/favorites', [FavoriteController::class, 'store']);
         Route::delete('/favorites/{placeId}', [FavoriteController::class, 'destroy']);
         Route::patch('/favorites/{id}/toggle-visited', [FavoriteController::class, 'toggleVisited']);
-
-        // Chat Admin Management
-        Route::get('/chats', [ChatController::class, 'index']);
-        Route::post('/chats', [ChatController::class, 'store']);
-        Route::get('/chats/{id}', [ChatController::class, 'show']);
-        Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
-        Route::put('/chats/{id}/status', [ChatController::class, 'updateStatus']);
 
         // Deletion Requests Admin Moderation
         Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);

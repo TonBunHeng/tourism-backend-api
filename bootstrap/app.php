@@ -17,10 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
             'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
             'update.user.activity' => \App\Http\Middleware\UpdateUserActivity::class,
+            'account.active' => \App\Http\Middleware\EnsureAccountActive::class,
         ]);
         $middleware->api(prepend: [
             \App\Http\Middleware\CheckBlockedIp::class,
             \App\Http\Middleware\UpdateUserActivity::class,
+            \App\Http\Middleware\EnsureAccountActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -12,7 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE `users` MODIFY `avatar` LONGTEXT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE `users` MODIFY `avatar` LONGTEXT NULL');
+        }
     }
 
     /**
@@ -20,6 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('ALTER TABLE `users` MODIFY `avatar` VARCHAR(255) NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE `users` MODIFY `avatar` VARCHAR(255) NULL');
+        }
     }
 };

@@ -10,10 +10,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE `places` MODIFY `image_url` LONGTEXT NULL');
-        DB::statement('ALTER TABLE `events` MODIFY `image_url` LONGTEXT NULL');
-        DB::statement('ALTER TABLE `gallery_media` MODIFY `url` LONGTEXT NOT NULL');
-        DB::statement('ALTER TABLE `review_images` MODIFY `image_url` LONGTEXT NOT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE `places` MODIFY `image_url` LONGTEXT NULL');
+            DB::statement('ALTER TABLE `events` MODIFY `image_url` LONGTEXT NULL');
+            DB::statement('ALTER TABLE `gallery_media` MODIFY `url` LONGTEXT NOT NULL');
+            DB::statement('ALTER TABLE `review_images` MODIFY `image_url` LONGTEXT NOT NULL');
+        }
     }
 
     /**
@@ -21,9 +23,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('ALTER TABLE `places` MODIFY `image_url` VARCHAR(255) NULL');
-        DB::statement('ALTER TABLE `events` MODIFY `image_url` VARCHAR(255) NULL');
-        DB::statement('ALTER TABLE `gallery_media` MODIFY `url` VARCHAR(255) NOT NULL');
-        DB::statement('ALTER TABLE `review_images` MODIFY `image_url` VARCHAR(255) NOT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE `places` MODIFY `image_url` VARCHAR(255) NULL');
+            DB::statement('ALTER TABLE `events` MODIFY `image_url` VARCHAR(255) NULL');
+            DB::statement('ALTER TABLE `gallery_media` MODIFY `url` VARCHAR(255) NOT NULL');
+            DB::statement('ALTER TABLE `review_images` MODIFY `image_url` VARCHAR(255) NOT NULL');
+        }
     }
 };

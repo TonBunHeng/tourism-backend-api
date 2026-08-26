@@ -23,21 +23,30 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        $ip = $request->ip();
+        $throttleKey = 'admin_register:' . $ip;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->errorResponse("Too many registration attempts. Please try again in {$seconds} seconds.", 429);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
             'password' => 'required|string|min:6',
             'phone' => 'nullable|string|max:30',
-            'role' => ['nullable', Rule::in(['Super Admin', 'Admin', 'Guide / Editor', 'User'])],
             'location' => 'nullable|string|max:100',
         ]);
+
+        RateLimiter::hit($throttleKey, 60);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'password_hash' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'User',
+            'role' => 'User', // Public registration is strictly restricted to regular User role
             'status' => 'Active',
             'location' => $validated['location'] ?? null,
         ]);

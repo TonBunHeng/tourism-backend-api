@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -29,7 +30,16 @@ class TravelAuthController extends Controller
 
     public function register(TravelRegisterRequest $request): JsonResponse
     {
+        $ip = $request->ip();
+        $throttleKey = 'travel_register:' . $ip;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->errorResponse("Too many registration attempts. Please try again in {$seconds} seconds.", 429);
+        }
+
         $validated = $request->validated();
+        RateLimiter::hit($throttleKey, 60);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -95,9 +105,18 @@ class TravelAuthController extends Controller
             ], 403);
         }
 
+        $throttleKey = 'travel_login:' . Str::lower($email) . '|' . $ip;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->errorResponse("Too many login attempts. Please try again in {$seconds} seconds.", 429);
+        }
+
         $user = User::where('email', $email)->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password_hash)) {
+            RateLimiter::hit($throttleKey, 300);
+
             LoginAttempt::create([
                 'email' => $email,
                 'ip_address' => $ip,
@@ -133,6 +152,7 @@ class TravelAuthController extends Controller
             'attempted_at' => now(),
         ]);
 
+        RateLimiter::clear($throttleKey);
         $user->update(['last_active_at' => now()]);
         $token = $user->createToken('travel_auth_token')->plainTextToken;
 
@@ -231,7 +251,17 @@ class TravelAuthController extends Controller
 
     public function googleLogin(TravelGoogleLoginRequest $request): JsonResponse
     {
+        $ip = $request->ip();
+        $throttleKey = 'travel_oauth_google:' . $ip;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->errorResponse("Too many authentication attempts. Please try again in {$seconds} seconds.", 429);
+        }
+
         $validated = $request->validated();
+        RateLimiter::hit($throttleKey, 60);
+
         $googleId = $validated['google_id'] ?? null;
         $email = $validated['email'] ?? null;
         $name = $validated['name'] ?? null;
@@ -321,6 +351,7 @@ class TravelAuthController extends Controller
             ]);
         }
 
+        RateLimiter::clear($throttleKey);
         $token = $user->createToken('travel_google_auth_token')->plainTextToken;
 
         return $this->successResponse([
@@ -332,7 +363,17 @@ class TravelAuthController extends Controller
 
     public function facebookLogin(TravelFacebookLoginRequest $request): JsonResponse
     {
+        $ip = $request->ip();
+        $throttleKey = 'travel_oauth_facebook:' . $ip;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return $this->errorResponse("Too many authentication attempts. Please try again in {$seconds} seconds.", 429);
+        }
+
         $validated = $request->validated();
+        RateLimiter::hit($throttleKey, 60);
+
         $fbId = $validated['facebook_id'] ?? null;
         $email = $validated['email'] ?? null;
         $name = $validated['name'] ?? null;
@@ -374,6 +415,7 @@ class TravelAuthController extends Controller
             $user->update(['last_active_at' => now()]);
         }
 
+        RateLimiter::clear($throttleKey);
         $token = $user->createToken('travel_facebook_auth_token')->plainTextToken;
 
         return $this->successResponse([

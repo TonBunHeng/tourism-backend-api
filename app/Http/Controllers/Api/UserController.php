@@ -55,6 +55,8 @@ class UserController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $currentUser = $request->user();
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
@@ -67,6 +69,10 @@ class UserController extends Controller
             'subscription' => ['nullable', Rule::in(['Free', 'Basic', 'Premium'])],
             'bio' => 'nullable|string',
         ]);
+
+        if ($validated['role'] === 'Super Admin' && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Only Super Administrators can create Super Admin accounts.', 403);
+        }
 
         $validated['password_hash'] = Hash::make($validated['password']);
         unset($validated['password']);
@@ -89,10 +95,15 @@ class UserController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
+        $currentUser = $request->user();
         $user = User::find($id);
 
         if (!$user) {
             return $this->errorResponse('User not found.', 404);
+        }
+
+        if ($user->isSuperAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Only Super Administrators can modify Super Admin accounts.', 403);
         }
 
         $validated = $request->validate([
@@ -110,6 +121,10 @@ class UserController extends Controller
             'bio' => 'nullable|string',
         ]);
 
+        if (isset($validated['role']) && $validated['role'] === 'Super Admin' && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Only Super Administrators can assign the Super Admin role.', 403);
+        }
+
         if (!empty($validated['password'])) {
             $validated['password_hash'] = Hash::make($validated['password']);
             unset($validated['password']);
@@ -120,12 +135,21 @@ class UserController extends Controller
         return $this->successResponse(new UserResource($user), 'User updated successfully.');
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
+        $currentUser = $request->user();
         $user = User::find($id);
 
         if (!$user) {
             return $this->errorResponse('User not found.', 404);
+        }
+
+        if ($currentUser && $user->id === $currentUser->id) {
+            return $this->errorResponse('You cannot delete your own account.', 422);
+        }
+
+        if ($user->isSuperAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Only Super Administrators can delete Super Admin accounts.', 403);
         }
 
         $user->delete();
