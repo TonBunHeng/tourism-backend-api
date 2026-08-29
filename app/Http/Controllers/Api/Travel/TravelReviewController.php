@@ -93,6 +93,8 @@ class TravelReviewController extends Controller
 
         $this->updatePlaceRating($validated['place_id']);
 
+        \App\Services\AchievementManager::checkAndAward($user);
+
         $review->load(['user', 'place', 'images', 'replies.user']);
 
         \App\Models\Notification::createNotification([

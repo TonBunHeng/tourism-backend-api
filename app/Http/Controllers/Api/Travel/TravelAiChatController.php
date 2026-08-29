@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Models\AiConversation;
+use App\Models\AiMessage;
 use App\Services\AiChatService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class TravelAiChatController extends Controller
 {
@@ -20,7 +23,7 @@ class TravelAiChatController extends Controller
     }
 
     /**
-     * Handle AI chat message.
+     * Handle AI chat message and persist conversation history.
      * POST /api/travel/ai/chat or POST /api/travel/ai-chat
      */
     public function chat(Request $request): JsonResponse
@@ -33,7 +36,8 @@ class TravelAiChatController extends Controller
             'language' => 'nullable|string|max:10',
         ]);
 
-        $sessionId = $validated['session_id'] ?? ($request->user() ? ('user_' . $request->user()->id) : null);
+        $user = $request->user();
+        $sessionId = $validated['session_id'] ?? ($user ? ('user_' . $user->id . '_' . date('Ymd')) : ('guest_' . Str::random(16)));
 
         $context = [];
         if (!empty($validated['category'])) {
@@ -46,6 +50,25 @@ class TravelAiChatController extends Controller
             $context['language'] = $validated['language'];
         }
 
+        // Find or create AI Conversation
+        $conversation = AiConversation::firstOrCreate(
+            ['session_id' => $sessionId],
+            [
+                'user_id' => $user?->id,
+                'title' => Str::limit($validated['message'], 40),
+                'province' => $validated['province'] ?? null,
+                'category' => $validated['category'] ?? null,
+                'language' => $validated['language'] ?? 'en',
+            ]
+        );
+
+        // Record User Message
+        $conversation->messages()->create([
+            'role' => 'user',
+            'content' => $validated['message'],
+        ]);
+
+        // Send to AI Service
         $result = $this->aiService->sendMessage($validated['message'], $sessionId, $context);
 
         if (!$result['success']) {
@@ -55,15 +78,102 @@ class TravelAiChatController extends Controller
             );
         }
 
+        $responseData = $result['data']['data'] ?? $result['data'];
+        $assistantReply = $responseData['response'] ?? $responseData['message'] ?? $responseData['content'] ?? (is_string($responseData) ? $responseData : json_encode($responseData));
+
+        // Record Assistant Message
+        $conversation->messages()->create([
+            'role' => 'assistant',
+            'content' => is_string($assistantReply) ? $assistantReply : json_encode($assistantReply),
+            'metadata' => is_array($responseData) ? $responseData : null,
+        ]);
+
+        $conversation->update(['last_message_at' => now()]);
+
+        return $this->successResponse([
+            'response' => $assistantReply,
+            'session_id' => $sessionId,
+            'data' => $responseData,
+        ], 'AI response generated successfully.');
+    }
+
+    /**
+     * Get user's past AI conversations.
+     * GET /api/travel/ai/conversations
+     */
+    public function conversations(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user) {
+            return $this->errorResponse('Authentication required.', 401);
+        }
+
+        $conversations = AiConversation::where('user_id', $user->id)
+            ->withCount('messages')
+            ->orderBy('last_message_at', 'desc')
+            ->paginate(15);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Conversations retrieved successfully.',
+            'data' => $conversations->items(),
+            'pagination' => [
+                'current_page' => $conversations->currentPage(),
+                'last_page' => $conversations->lastPage(),
+                'total' => $conversations->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get message history for a specific conversation session.
+     * GET /api/travel/ai/conversations/{sessionId}/messages
+     */
+    public function getMessages(Request $request, string $sessionId): JsonResponse
+    {
+        $user = $request->user();
+        $conversation = AiConversation::with('messages')
+            ->where('session_id', $sessionId)
+            ->first();
+
+        if (!$conversation) {
+            return $this->errorResponse('Conversation not found.', 404);
+        }
+
+        if ($conversation->user_id && (!$user || $conversation->user_id !== $user->id)) {
+            return $this->errorResponse('Access denied.', 403);
+        }
+
         return $this->successResponse(
-            $result['data']['data'] ?? $result['data'],
-            'AI response generated successfully.'
+            $conversation->messages,
+            'Messages retrieved successfully.'
         );
     }
 
     /**
+     * Clear a conversation session.
+     * DELETE /api/travel/ai/conversations/{sessionId}
+     */
+    public function clearConversation(Request $request, string $sessionId): JsonResponse
+    {
+        $user = $request->user();
+        $conversation = AiConversation::where('session_id', $sessionId)->first();
+
+        if (!$conversation) {
+            return $this->errorResponse('Conversation not found.', 404);
+        }
+
+        if ($conversation->user_id && (!$user || $conversation->user_id !== $user->id)) {
+            return $this->errorResponse('Access denied.', 403);
+        }
+
+        $conversation->delete();
+
+        return $this->successResponse(null, 'Conversation deleted successfully.');
+    }
+
+    /**
      * Generate multi-factor smart recommendations for Cambodia destinations.
-     * POST /api/travel/ai/recommendations or POST /api/travel/recommendations
      */
     public function recommendations(Request $request): JsonResponse
     {
@@ -94,7 +204,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Generate route-optimized day-by-day travel itinerary.
-     * POST /api/travel/ai/itineraries or POST /api/travel/itineraries
      */
     public function itineraries(Request $request): JsonResponse
     {
@@ -126,7 +235,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Get weather forecast and travel suitability advice.
-     * GET /api/travel/ai/weather or GET /api/travel/weather
      */
     public function weather(Request $request): JsonResponse
     {
@@ -150,7 +258,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Get verified Cambodian festivals and events.
-     * GET /api/travel/ai/events or GET /api/travel/events
      */
     public function events(Request $request): JsonResponse
     {
@@ -175,7 +282,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Get current USD <-> KHR reference exchange rate.
-     * GET /api/travel/ai/currency or GET /api/travel/currency
      */
     public function currency(): JsonResponse
     {
@@ -196,7 +302,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Convert currency between USD and KHR.
-     * POST /api/travel/ai/currency/convert or POST /api/currency/convert
      */
     public function convertCurrency(Request $request): JsonResponse
     {
@@ -227,7 +332,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Get tailored Cambodian transit options, pricing, and tips.
-     * GET /api/travel/ai/transport or GET /api/travel/transport
      */
     public function transport(Request $request): JsonResponse
     {
@@ -252,7 +356,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Search AI tourism knowledge base.
-     * POST /api/travel/ai/search or POST /api/search
      */
     public function search(Request $request): JsonResponse
     {
@@ -278,7 +381,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Summarize tourism topic.
-     * POST /api/travel/ai/summary or POST /api/summary
      */
     public function summary(Request $request): JsonResponse
     {
@@ -309,7 +411,6 @@ class TravelAiChatController extends Controller
 
     /**
      * Check AI models and system status.
-     * GET /api/travel/ai/status or GET /api/ai/status
      */
     public function status(): JsonResponse
     {

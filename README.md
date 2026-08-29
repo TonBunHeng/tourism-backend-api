@@ -39,12 +39,15 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
   - [6. Media Gallery](#6-media-gallery)
   - [7. Reviews & Ratings](#7-reviews--ratings)
   - [8. Favorites & Wishlist](#8-favorites--wishlist)
-  - [9. Gamification & Achievements](#9-gamification--achievements)
-  - [10. Live Support Chat](#10-live-support-chat)
-  - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
-  - [12. Public App Settings](#12-public-app-settings)
-  - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
+  - [9. Trip Planner & Itineraries](#9-trip-planner--itineraries)
+  - [10. Gamification & Achievements](#10-gamification--achievements)
+  - [11. Live Support Chat](#11-live-support-chat)
+  - [12. Privacy & Deletion Requests](#12-privacy--deletion-requests)
+  - [13. Public App Settings](#13-public-app-settings)
+  - [14. AI Assistant & Tourism Intelligence](#14-ai-assistant--tourism-intelligence)
 - [Admin Management API Reference (`/api/*`)](#-admin-management-api-reference-api)
+  - [Audit Logs & Security Monitoring](#audit-logs--security-monitoring)
+  - [Support Chat Administration](#support-chat-administration)
 - [Standard API Response Format](#-standard-api-response-format)
 - [Installation & Setup](#-installation--setup)
 - [Testing](#-testing)
@@ -274,26 +277,56 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 ### 8. Favorites & Wishlist
 
 - `GET /api/travel/favorites` (`Bearer Token`): Retrieve user's saved wishlist destinations.
-- `POST /api/travel/favorites` (`Bearer Token`):
-  ```json
-  {
-    "place_id": 1,
-    "visited": false
-  }
-  ```
+- `POST /api/travel/favorites` (`Bearer Token`): Save place to wishlist.
+- `POST /api/travel/favorites/toggle` (`Bearer Token`): Toggle favorite status.
 - `DELETE /api/travel/favorites/{placeId}` (`Bearer Token`): Remove destination from wishlist.
 - `PATCH /api/travel/favorites/{id}/toggle-visited` (`Bearer Token`): Toggle visited status.
 
 ---
 
-### 9. Gamification & Achievements
+### 9. Trip Planner & Itineraries
 
-- `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Eco Traveler*, *Cultural Enthusiast*, etc.).
-- `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve authenticated user's unlocked badges and progress.
+- `GET /api/travel/trips` (`Bearer Token`): List current user's travel plans with activity count.
+- `POST /api/travel/trips` (`Bearer Token`): Create new trip plan with day-by-day activities.
+  ```json
+  {
+    "title": "Siem Reap 3-Day Explorer",
+    "destination": "Siem Reap",
+    "start_date": "2026-10-15",
+    "end_date": "2026-10-18",
+    "budget": 250,
+    "travelers": 2,
+    "status": "planning",
+    "notes": "Bring wide angle lens and light cotton clothes",
+    "itineraries": [
+      {
+        "day_number": 1,
+        "time_slot": "05:30 AM",
+        "activity": "Sunrise at Angkor Wat reflecting pool",
+        "place_id": 1,
+        "estimated_cost": 37
+      }
+    ]
+  }
+  ```
+- `GET /api/travel/trips/{id}` (`Bearer Token`): Get full trip details with all activities ordered by day.
+- `PUT /api/travel/trips/{id}` (`Bearer Token`): Update trip metadata and sync itinerary activities.
+- `DELETE /api/travel/trips/{id}` (`Bearer Token`): Delete trip.
+- `POST /api/travel/trips/{id}/duplicate` (`Bearer Token`): Duplicate an existing trip.
+- `POST /api/travel/trips/{id}/itineraries` (`Bearer Token`): Add activity to a specific day.
+- `DELETE /api/travel/trips/{id}/itineraries/{itineraryId}` (`Bearer Token`): Remove single activity.
+- `POST /api/travel/trips/{id}/reorder` (`Bearer Token`): Batch reorder schedule order.
 
 ---
 
-### 10. Live Support Chat
+### 10. Gamification & Achievements
+
+- `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Heritage Master*, *Wanderlust Explorer*, *Trip Planner Pioneer*, *Gallery Contributor*, *Cambodia Heritage Champion*).
+- `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve user's unlocked badges and automatically calculate new achievements.
+
+---
+
+### 11. Live Support Chat
 
 - `GET /api/travel/chats` (`Bearer Token`): List user's support conversations.
 - `POST /api/travel/chats` (`Bearer Token`): Start a new conversation.
@@ -327,13 +360,27 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 12. Public App Settings
+### 12. Push Notifications & Notification Center
+
+- `GET /api/travel/notifications` (`Bearer Token`): Fetch notifications with optional filters (`category`, `unread_only`, `search`).
+- `GET /api/travel/notifications/unread-count` (`Bearer Token`): Get current unread notification count badge.
+- `PATCH /api/travel/notifications/{id}/read` (`Bearer Token`): Mark single notification as read.
+- `PATCH /api/travel/notifications/read-all` (`Bearer Token`): Mark all notifications as read.
+- `POST /api/travel/notifications/subscribe` (`Bearer Token`): Subscribe browser/device to Web Push notifications (`endpoint`, `keys.p256dh`, `keys.auth`).
+- `DELETE /api/travel/notifications/subscribe` (`Bearer Token`): Unsubscribe browser/device from Web Push notifications.
+- `GET /api/travel/notifications/settings` (`Bearer Token`): Retrieve user's notification preferences (`push_enabled`, `events_enabled`, `messages_enabled`, `system_enabled`, `promotions_enabled`).
+- `PUT /api/travel/notifications/settings` (`Bearer Token`): Update notification preferences.
+- `GET /api/travel/notifications/vapid-key` (`Bearer Token`): Get public VAPID key for web push registration.
+
+---
+
+### 13. Public App Settings
 
 - `GET /api/travel/settings`: Public application configuration, emergency contacts (Tourist Police, Ambulance, Fire), support emails, and privacy URLs.
 
 ---
 
-### 13. AI Assistant & Tourism Intelligence
+### 14. AI Assistant & Tourism Intelligence
 
 Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.vercel.app/`).
 
@@ -405,16 +452,24 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
 | Method | Endpoint | Description | Guard / Role |
 |---|---|---|---|
 | `GET` | `/api/dashboard` | Dashboard statistical summary | `admin.role` |
-| `GET` | `/api/users` | List and search all users | `admin.role` |
-| `POST` | `/api/users` | Create user with assigned role | `admin.role` |
-| `PUT` | `/api/users/{id}/status` | Update user status (`Active`/`Suspended`) | `admin.role` |
+| `GET` | `/api/users` | List and search all users | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/users` | Create user with assigned role | `admin.role` (`Super Admin`, `Admin`) |
+| `PUT` | `/api/users/{id}/status` | Update user status (`Active`/`Suspended`) | `admin.role` (`Super Admin`, `Admin`) |
 | `POST` | `/api/places` | Create new tourist destination | `admin.role` |
 | `PUT` | `/api/places/{id}` | Update destination details | `admin.role` |
-| `DELETE` | `/api/places/{id}` | Delete destination | `admin.role` |
+| `DELETE` | `/api/places/{id}` | Delete destination | `admin.role` (`Super Admin`, `Admin`) |
 | `POST` | `/api/events` | Create event schedule | `admin.role` |
 | `PUT` | `/api/reviews/{id}/status` | Moderate review (`Approved`/`Rejected`) | `admin.role` |
-| `PUT` | `/api/deletion-requests/{id}/status` | Process account deletion request | `admin.role` |
-| `PUT` | `/api/settings` | Update system-wide configurations | `admin.role` |
+| `POST` | `/api/reviews/{id}/replies` | Staff reply to review | `admin.role` |
+| `GET` | `/api/chats` | List support conversations | `admin.role` |
+| `POST` | `/api/chats/{id}/messages` | Reply to tourist support ticket | `admin.role` |
+| `PUT` | `/api/chats/{id}/status` | Resolve/close support ticket | `admin.role` |
+| `GET` | `/api/audit-logs` | Filter and view system audit records | `admin.role` (`Super Admin`, `Admin`) |
+| `GET` | `/api/audit-logs/export` | Stream CSV export of audit logs | `admin.role` (`Super Admin`, `Admin`) |
+| `GET` | `/api/security-alerts` | View rate limits & intrusion alerts | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/security-alerts/block-ip` | Manually block abusive IP | `admin.role` (`Super Admin`, `Admin`) |
+| `PUT` | `/api/deletion-requests/{id}/status` | Process account deletion request | `admin.role` (`Super Admin`) |
+| `PUT` | `/api/settings` | Update system-wide configurations | `admin.role` (`Super Admin`) |
 
 ---
 

@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\EventController;
@@ -30,6 +32,7 @@ use App\Http\Controllers\Api\Travel\TravelPlaceController;
 use App\Http\Controllers\Api\Travel\TravelProvinceController;
 use App\Http\Controllers\Api\Travel\TravelReviewController;
 use App\Http\Controllers\Api\Travel\TravelSettingController;
+use App\Http\Controllers\Api\Travel\TravelTripController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -154,6 +157,22 @@ Route::prefix('travel')->group(function () {
         // Tourist My Achievements
         Route::get('/achievements/my', [TravelAchievementController::class, 'myAchievements']);
 
+        // Tourist Trip Planner / Itineraries
+        Route::get('/trips', [TravelTripController::class, 'index']);
+        Route::post('/trips', [TravelTripController::class, 'store']);
+        Route::get('/trips/{id}', [TravelTripController::class, 'show']);
+        Route::put('/trips/{id}', [TravelTripController::class, 'update']);
+        Route::delete('/trips/{id}', [TravelTripController::class, 'destroy']);
+        Route::post('/trips/{id}/duplicate', [TravelTripController::class, 'duplicate']);
+        Route::post('/trips/{id}/itineraries', [TravelTripController::class, 'addItinerary']);
+        Route::delete('/trips/{id}/itineraries/{itineraryId}', [TravelTripController::class, 'deleteItinerary']);
+        Route::post('/trips/{id}/reorder', [TravelTripController::class, 'reorderItineraries']);
+
+        // Tourist AI Chat History
+        Route::get('/ai/conversations', [TravelAiChatController::class, 'conversations']);
+        Route::get('/ai/conversations/{sessionId}/messages', [TravelAiChatController::class, 'getMessages']);
+        Route::delete('/ai/conversations/{sessionId}', [TravelAiChatController::class, 'clearConversation']);
+
         // Tourist Support Chat
         Route::get('/chats', [TravelChatController::class, 'index']);
         Route::post('/chats', [TravelChatController::class, 'store']);
@@ -164,11 +183,18 @@ Route::prefix('travel')->group(function () {
         Route::get('/deletion-requests', [TravelDeletionRequestController::class, 'index']);
         Route::post('/deletion-requests', [TravelDeletionRequestController::class, 'store']);
 
-        // Tourist Notifications
+        // Tourist Notifications & Web Push
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/subscribe', [NotificationController::class, 'subscribePush']);
+        Route::delete('/notifications/subscribe', [NotificationController::class, 'unsubscribePush']);
+        Route::get('/notifications/settings', [NotificationController::class, 'getSettings']);
+        Route::put('/notifications/settings', [NotificationController::class, 'updateSettings']);
+        Route::get('/notifications/vapid-key', [NotificationController::class, 'vapidPublicKey']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
     });
@@ -285,13 +311,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', [SystemSettingController::class, 'index']);
         Route::put('/settings', [SystemSettingController::class, 'update']);
 
-        // Notifications Admin APIs
+        // Notifications Admin APIs & Web Push
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/subscribe', [NotificationController::class, 'subscribePush']);
+        Route::delete('/notifications/subscribe', [NotificationController::class, 'unsubscribePush']);
+        Route::get('/notifications/settings', [NotificationController::class, 'getSettings']);
+        Route::put('/notifications/settings', [NotificationController::class, 'updateSettings']);
+        Route::get('/notifications/vapid-key', [NotificationController::class, 'vapidPublicKey']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
+
+        // Support Chat Management
+        Route::get('/chats', [ChatController::class, 'index']);
+        Route::post('/chats', [ChatController::class, 'store']);
+        Route::get('/chats/{id}', [ChatController::class, 'show']);
+        Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
+        Route::put('/chats/{id}/status', [ChatController::class, 'updateStatus']);
+
+        // Audit Logs Management
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
+        Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);
 
         // Security Alerts & Audit Logs Management
         Route::get('/security-alerts', [SecurityAlertController::class, 'index']);

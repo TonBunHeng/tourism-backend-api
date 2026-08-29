@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Travel\TravelFavoriteRequest;
 use App\Http\Resources\Travel\TravelFavoriteResource;
 use App\Models\Favorite;
+use App\Services\AchievementManager;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,8 @@ class TravelFavoriteController extends Controller
                 'saved_date' => now()->toDateString(),
             ]
         );
+
+        AchievementManager::checkAndAward($user);
 
         $favorite->load(['place.category', 'place.province']);
 
@@ -101,6 +104,8 @@ class TravelFavoriteController extends Controller
             'visited' => false,
             'saved_date' => now()->toDateString(),
         ]);
+
+        AchievementManager::checkAndAward($user);
 
         $favorite->load(['place.category', 'place.province']);
 
