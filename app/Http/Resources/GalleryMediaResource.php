@@ -2,22 +2,26 @@
 
 namespace App\Http\Resources;
 
+use App\Traits\NormalizesMediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class GalleryMediaResource extends JsonResource
 {
+    use NormalizesMediaUrl;
+
     public function toArray(Request $request): array
     {
         $catName = $this->relationLoaded('category') ? $this->category?->name : null;
         $placeName = $this->relationLoaded('place') ? $this->place?->name : null;
         $uploaderName = $this->relationLoaded('uploader') ? $this->uploader?->name : null;
+        $resolvedUrl = $this->normalizeUrl($this->url);
 
         return [
             'id' => $this->id,
             'title' => $this->title,
             'type' => strtolower($this->type),
-            'url' => $this->url,
+            'url' => $resolvedUrl,
             'category_id' => $this->category_id,
             'category_name' => $catName ?? 'General',
             'category' => $catName ?? 'General',

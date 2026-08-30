@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources\Travel;
 
+use App\Traits\NormalizesMediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class TravelGalleryResource extends JsonResource
 {
+    use NormalizesMediaUrl;
+
     public function toArray(Request $request): array
     {
         $catName = $this->relationLoaded('category') ? $this->category?->name : null;
@@ -24,6 +27,7 @@ class TravelGalleryResource extends JsonResource
 
         $views = (int) ($this->views_count ?? 0);
         $likes = (int) ($this->likes_count ?? 0);
+        $resolvedUrl = $this->normalizeUrl($this->url);
 
         return [
             'id' => $this->id,
@@ -31,8 +35,8 @@ class TravelGalleryResource extends JsonResource
             'description' => $this->description ?? null,
             'type' => strtolower($this->type ?? 'image'),
             'media_type' => strtolower($this->type ?? 'image'),
-            'url' => $this->url,
-            'media_url' => $this->url,
+            'url' => $resolvedUrl,
+            'media_url' => $resolvedUrl,
             'category_id' => $this->category_id,
             'category' => $catName,
             'place_id' => $this->place_id,
