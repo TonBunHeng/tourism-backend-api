@@ -41,13 +41,11 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
   - [8. Favorites & Wishlist](#8-favorites--wishlist)
   - [9. Trip Planner & Itineraries](#9-trip-planner--itineraries)
   - [10. Gamification & Achievements](#10-gamification--achievements)
-  - [11. Live Support Chat](#11-live-support-chat)
-  - [12. Privacy & Deletion Requests](#12-privacy--deletion-requests)
-  - [13. Public App Settings](#13-public-app-settings)
-  - [14. AI Assistant & Tourism Intelligence](#14-ai-assistant--tourism-intelligence)
+  - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
+  - [12. Public App Settings](#12-public-app-settings)
+  - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
 - [Admin Management API Reference (`/api/*`)](#-admin-management-api-reference-api)
   - [Audit Logs & Security Monitoring](#audit-logs--security-monitoring)
-  - [Support Chat Administration](#support-chat-administration)
 - [Standard API Response Format](#-standard-api-response-format)
 - [Installation & Setup](#-installation--setup)
 - [Testing](#-testing)
@@ -70,7 +68,7 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
 
 | Role | Target Client | Capabilities |
 |---|---|---|
-| `User` | Tourist Web & Android Mobile App | Browse destinations, post reviews, save wishlist, live support chat, submit deletion requests |
+| `User` | Tourist Web & Android Mobile App | Browse destinations, post reviews, save wishlist, AI travel assistant, submit deletion requests |
 | `Guide / Editor` | Admin Portal | Manage destination content, event schedules, media gallery |
 | `Admin` | Admin Portal | Review moderation, analytics, user management, support moderation |
 | `Super Admin` | Admin Portal | Full administrative access, system configuration, user deletion approval |
@@ -324,26 +322,6 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 - `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Heritage Master*, *Wanderlust Explorer*, *Trip Planner Pioneer*, *Gallery Contributor*, *Cambodia Heritage Champion*).
 - `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve user's unlocked badges and automatically calculate new achievements.
 
----
-
-### 11. Live Support Chat
-
-- `GET /api/travel/chats` (`Bearer Token`): List user's support conversations.
-- `POST /api/travel/chats` (`Bearer Token`): Start a new conversation.
-  ```json
-  {
-    "category": "Angkor Pass Inquiry",
-    "priority": "medium",
-    "message": "Can I purchase the Angkor Pass on mobile with QR payment?"
-  }
-  ```
-- `GET /api/travel/chats/{id}` (`Bearer Token`): Get message history for conversation.
-- `POST /api/travel/chats/{id}/messages` (`Bearer Token`): Send message in conversation.
-  ```json
-  {
-    "message": "Thank you for the quick assistance!"
-  }
-  ```
 
 ---
 
@@ -461,9 +439,6 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
 | `POST` | `/api/events` | Create event schedule | `admin.role` |
 | `PUT` | `/api/reviews/{id}/status` | Moderate review (`Approved`/`Rejected`) | `admin.role` |
 | `POST` | `/api/reviews/{id}/replies` | Staff reply to review | `admin.role` |
-| `GET` | `/api/chats` | List support conversations | `admin.role` |
-| `POST` | `/api/chats/{id}/messages` | Reply to tourist support ticket | `admin.role` |
-| `PUT` | `/api/chats/{id}/status` | Resolve/close support ticket | `admin.role` |
 | `GET` | `/api/audit-logs` | Filter and view system audit records | `admin.role` (`Super Admin`, `Admin`) |
 | `GET` | `/api/audit-logs/export` | Stream CSV export of audit logs | `admin.role` (`Super Admin`, `Admin`) |
 | `GET` | `/api/security-alerts` | View rate limits & intrusion alerts | `admin.role` (`Super Admin`, `Admin`) |
@@ -548,7 +523,7 @@ composer run serve
 
 ## 🧪 Testing
 
-Run the automated PHPUnit test suite covering authentication, destinations, reviews, favorites, support chats, deletion requests, and role authorization:
+Run the automated PHPUnit test suite covering authentication, destinations, reviews, favorites, AI assistance, deletion requests, and role authorization:
 
 ```bash
 php artisan test

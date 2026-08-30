@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeletionRequestController;
 use App\Http\Controllers\Api\EventController;
@@ -23,7 +22,6 @@ use App\Http\Controllers\Api\Travel\TravelAchievementController;
 use App\Http\Controllers\Api\Travel\TravelAiChatController;
 use App\Http\Controllers\Api\Travel\TravelAuthController;
 use App\Http\Controllers\Api\Travel\TravelCategoryController;
-use App\Http\Controllers\Api\Travel\TravelChatController;
 use App\Http\Controllers\Api\Travel\TravelDeletionRequestController;
 use App\Http\Controllers\Api\Travel\TravelEventController;
 use App\Http\Controllers\Api\Travel\TravelFavoriteController;
@@ -173,12 +171,6 @@ Route::prefix('travel')->group(function () {
         Route::get('/ai/conversations/{sessionId}/messages', [TravelAiChatController::class, 'getMessages']);
         Route::delete('/ai/conversations/{sessionId}', [TravelAiChatController::class, 'clearConversation']);
 
-        // Tourist Support Chat
-        Route::get('/chats', [TravelChatController::class, 'index']);
-        Route::post('/chats', [TravelChatController::class, 'store']);
-        Route::get('/chats/{id}', [TravelChatController::class, 'show']);
-        Route::post('/chats/{id}/messages', [TravelChatController::class, 'sendMessage']);
-
         // Tourist Deletion & Privacy Requests
         Route::get('/deletion-requests', [TravelDeletionRequestController::class, 'index']);
         Route::post('/deletion-requests', [TravelDeletionRequestController::class, 'store']);
@@ -325,13 +317,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/notifications/vapid-key', [NotificationController::class, 'vapidPublicKey']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
-
-        // Support Chat Management
-        Route::get('/chats', [ChatController::class, 'index']);
-        Route::post('/chats', [ChatController::class, 'store']);
-        Route::get('/chats/{id}', [ChatController::class, 'show']);
-        Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
-        Route::put('/chats/{id}/status', [ChatController::class, 'updateStatus']);
 
         // Audit Logs Management
         Route::get('/audit-logs', [AuditLogController::class, 'index']);

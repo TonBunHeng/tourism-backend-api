@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\BlockedIp;
 use App\Models\Category;
-use App\Models\Chat;
-use App\Models\ChatMessage;
 use App\Models\Notification;
 use App\Models\Place;
 use App\Models\Province;
@@ -49,9 +47,6 @@ class SecurityHardeningTest extends TestCase
         $response->assertStatus(401);
 
         $response = $this->getJson('/api/travel/favorites');
-        $response->assertStatus(401);
-
-        $response = $this->getJson('/api/travel/chats');
         $response->assertStatus(401);
 
         $response = $this->postJson('/api/travel/reviews', [
@@ -263,46 +258,6 @@ class SecurityHardeningTest extends TestCase
             'id' => $review->id,
             'comment' => 'Original review text',
         ]);
-    }
-
-    /**
-     * 10. IDOR Protection: User A cannot view or send messages to User B's support chat.
-     */
-    public function test_idor_user_cannot_access_another_users_chat(): void
-    {
-        $userA = User::create([
-            'name' => 'User A',
-            'email' => 'usera@test.com',
-            'password_hash' => Hash::make('password123'),
-            'role' => 'User',
-            'status' => 'Active',
-        ]);
-
-        $userB = User::create([
-            'name' => 'User B',
-            'email' => 'userb@test.com',
-            'password_hash' => Hash::make('password123'),
-            'role' => 'User',
-            'status' => 'Active',
-        ]);
-
-        $chat = Chat::create([
-            'user_id' => $userA->id,
-            'category' => 'General Inquiry',
-            'priority' => 'medium',
-            'status' => 'active',
-        ]);
-
-        // User B attempts to view User A's chat
-        Sanctum::actingAs($userB, ['*']);
-        $response = $this->getJson("/api/travel/chats/{$chat->id}");
-        $response->assertStatus(403);
-
-        // User B attempts to send message to User A's chat
-        $response = $this->postJson("/api/travel/chats/{$chat->id}/messages", [
-            'message' => 'Unauthorized intrusion message',
-        ]);
-        $response->assertStatus(403);
     }
 
     /**
