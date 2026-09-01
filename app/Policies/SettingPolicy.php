@@ -13,6 +13,6 @@ class SettingPolicy
 
     public function update(User $user): bool
     {
-        return $user->isSuperAdmin();
+        return $user->isAdmin();
     }
 }
