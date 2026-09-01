@@ -23,7 +23,7 @@ class FavoriteController extends Controller
         $query = Favorite::with(['user', 'place.category', 'place.province']);
 
         // Admins and Super Admins can see all users' saved favorites or filter by user
-        if ($user->role === 'Admin' || $user->role === 'Super Admin') {
+        if ($user->isAdmin()) {
             if ($request->has('user_id') && $request->query('user_id') !== 'All') {
                 $query->where('user_id', $request->query('user_id'));
             }

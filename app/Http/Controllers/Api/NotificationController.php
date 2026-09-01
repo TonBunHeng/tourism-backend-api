@@ -20,7 +20,7 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::query();
 
@@ -101,7 +101,7 @@ class NotificationController extends Controller
     public function unreadCount(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::where('read', false);
 
@@ -132,7 +132,7 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::where('id', $id);
         if (!$isAdmin) {
@@ -186,7 +186,7 @@ class NotificationController extends Controller
     public function markAllRead(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::where('read', false);
         if (!$isAdmin) {
@@ -378,7 +378,7 @@ class NotificationController extends Controller
     public function destroy(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::where('id', $id);
         if (!$isAdmin) {
@@ -428,7 +428,7 @@ class NotificationController extends Controller
     public function clearAll(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = in_array($user->role ?? '', ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        $isAdmin = $user && $user->canModerate();
 
         $query = Notification::query();
         if (!$isAdmin) {

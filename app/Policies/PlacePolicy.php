@@ -19,16 +19,16 @@ class PlacePolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        return $user->canModerate();
     }
 
     public function update(User $user, Place $place): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        return $user->canModerate();
     }
 
     public function delete(User $user, Place $place): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->isAdmin();
     }
 }

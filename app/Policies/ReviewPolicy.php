@@ -24,21 +24,29 @@ class ReviewPolicy
 
     public function update(User $user, Review $review): bool
     {
-        return $review->user_id === $user->id || in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $review->user_id === $user->id || $user->isAdmin();
     }
 
     public function delete(User $user, Review $review): bool
     {
-        return $review->user_id === $user->id || in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $review->user_id === $user->id || $user->isAdmin();
     }
 
     public function moderate(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->isAdmin();
     }
 
-    public function reply(User $user): bool
+    public function reply(User $user, ?Review $review = null): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        if ($user->canModerate()) {
+            return true;
+        }
+
+        if ($review && $review->business_id && $review->business && $review->business->owner_id === $user->id) {
+            return true;
+        }
+
+        return false;
     }
 }

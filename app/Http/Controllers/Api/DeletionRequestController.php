@@ -29,7 +29,7 @@ class DeletionRequestController extends Controller
         $user = $request->user();
         $query = DeletionRequest::with(['user', 'processedBy', 'items']);
 
-        if (!in_array($user->role, ['Super Admin', 'Admin'])) {
+        if (!$user->isAdmin()) {
             $query->where('user_id', $user->id);
         }
 

@@ -14,6 +14,7 @@ class Review extends Model
     protected $fillable = [
         'user_id',
         'place_id',
+        'business_id',
         'rating',
         'title',
         'comment',
@@ -28,6 +29,7 @@ class Review extends Model
         return [
             'user_id' => 'integer',
             'place_id' => 'integer',
+            'business_id' => 'integer',
             'rating' => 'integer',
             'likes_count' => 'integer',
             'dislikes_count' => 'integer',
@@ -45,6 +47,11 @@ class Review extends Model
     public function place()
     {
         return $this->belongsTo(Place::class, 'place_id');
+    }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class, 'business_id');
     }
 
     public function replies()

@@ -124,7 +124,7 @@ class SecurityHardeningTest extends TestCase
 
         $user = User::where('email', 'attacker@exploit.com')->first();
         $this->assertNotNull($user);
-        $this->assertEquals('User', $user->role, 'Public registration MUST always create role=User');
+        $this->assertTrue(in_array($user->role, ['user', 'User'], true), 'Public registration MUST always create role=user');
     }
 
     /**

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
+            'role' => \App\Http\Middleware\EnsureRole::class,
             'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
             'update.user.activity' => \App\Http\Middleware\UpdateUserActivity::class,
             'account.active' => \App\Http\Middleware\EnsureAccountActive::class,

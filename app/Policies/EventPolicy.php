@@ -19,16 +19,32 @@ class EventPolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        return $user->canModerate() || $user->isBusinessOwner();
     }
 
     public function update(User $user, Event $event): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin', 'Guide / Editor'], true);
+        if ($user->canModerate()) {
+            return true;
+        }
+
+        if ($user->isBusinessOwner() && $event->business_id && $event->business && $event->business->owner_id === $user->id) {
+            return true;
+        }
+
+        return false;
     }
 
     public function delete(User $user, Event $event): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBusinessOwner() && $event->business_id && $event->business && $event->business->owner_id === $user->id) {
+            return true;
+        }
+
+        return false;
     }
 }

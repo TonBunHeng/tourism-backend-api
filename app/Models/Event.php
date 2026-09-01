@@ -18,6 +18,7 @@ class Event extends Model
         'description',
         'location',
         'place_id',
+        'business_id',
         'province_id',
         'start_date',
         'end_date',
@@ -35,6 +36,7 @@ class Event extends Model
     {
         return [
             'place_id' => 'integer',
+            'business_id' => 'integer',
             'province_id' => 'integer',
             'start_date' => 'date:Y-m-d',
             'end_date' => 'date:Y-m-d',
@@ -99,6 +101,11 @@ class Event extends Model
     public function place()
     {
         return $this->belongsTo(Place::class, 'place_id');
+    }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class, 'business_id');
     }
 
     public function province()

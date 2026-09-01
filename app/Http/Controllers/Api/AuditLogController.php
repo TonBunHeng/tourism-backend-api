@@ -19,7 +19,7 @@ class AuditLogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!in_array($user->role, ['Super Admin', 'Admin'], true)) {
+        if (!$user->isAdmin()) {
             return $this->errorResponse('Access denied. Administrator privileges required.', 403);
         }
 
@@ -81,7 +81,7 @@ class AuditLogController extends Controller
     public function show(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        if (!in_array($user->role, ['Super Admin', 'Admin'], true)) {
+        if (!$user->isAdmin()) {
             return $this->errorResponse('Access denied.', 403);
         }
 
@@ -103,7 +103,7 @@ class AuditLogController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $user = $request->user();
-        if (!in_array($user->role, ['Super Admin', 'Admin'], true)) {
+        if (!$user->isAdmin()) {
             abort(403, 'Unauthorized');
         }
 

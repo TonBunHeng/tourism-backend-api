@@ -15,8 +15,26 @@ class UserController extends Controller
 {
     use ApiResponse;
 
+    protected static array $allowedRoleInputs = [
+        User::ROLE_SUPER_ADMIN,
+        User::ROLE_ADMIN,
+        User::ROLE_GUIDE_EDITOR,
+        User::ROLE_BUSINESS_OWNER,
+        User::ROLE_USER,
+        'Super Admin',
+        'Admin',
+        'Guide / Editor',
+        'Business Owner',
+        'User',
+    ];
+
     public function index(Request $request): JsonResponse
     {
+        $currentUser = $request->user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
+
         $query = User::query();
 
         if ($search = $request->query('search')) {
@@ -28,7 +46,11 @@ class UserController extends Controller
         }
 
         if ($role = $request->query('role')) {
-            $query->where('role', $role);
+            $normalizedRole = User::normalizeRole($role);
+            $query->where(function ($q) use ($normalizedRole, $role) {
+                $q->where('role', $normalizedRole)
+                  ->orWhere('role', $role);
+            });
         }
 
         if ($status = $request->query('status')) {
@@ -56,6 +78,9 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $currentUser = $request->user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
@@ -63,17 +88,20 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
             'phone' => 'nullable|string|max:30',
             'avatar' => 'nullable|string',
-            'role' => ['required', Rule::in(['Super Admin', 'Admin', 'Guide / Editor', 'User'])],
+            'role' => ['required', Rule::in(self::$allowedRoleInputs)],
             'status' => ['required', Rule::in(['Active', 'Inactive', 'Suspended'])],
             'location' => 'nullable|string|max:100',
             'subscription' => ['nullable', Rule::in(['Free', 'Basic', 'Premium'])],
             'bio' => 'nullable|string',
         ]);
 
-        if ($validated['role'] === 'Super Admin' && (!$currentUser || !$currentUser->isSuperAdmin())) {
+        $normalizedRole = User::normalizeRole($validated['role']);
+
+        if ($normalizedRole === User::ROLE_SUPER_ADMIN && (!$currentUser || !$currentUser->isSuperAdmin())) {
             return $this->errorResponse('Only Super Administrators can create Super Admin accounts.', 403);
         }
 
+        $validated['role'] = $normalizedRole;
         $validated['password_hash'] = Hash::make($validated['password']);
         unset($validated['password']);
 
@@ -82,8 +110,13 @@ class UserController extends Controller
         return $this->successResponse(new UserResource($user), 'User created successfully.', 201);
     }
 
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
+        $currentUser = $request->user();
+        if (!$currentUser || (!$currentUser->isAdmin() && (int)$currentUser->id !== (int)$id)) {
+            return $this->errorResponse('Access denied.', 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -102,6 +135,10 @@ class UserController extends Controller
             return $this->errorResponse('User not found.', 404);
         }
 
+        if (!$currentUser || (!$currentUser->isAdmin() && (int)$currentUser->id !== (int)$user->id)) {
+            return $this->errorResponse('Access denied.', 403);
+        }
+
         if ($user->isSuperAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
             return $this->errorResponse('Only Super Administrators can modify Super Admin accounts.', 403);
         }
@@ -112,7 +149,7 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6',
             'phone' => 'nullable|string|max:30',
             'avatar' => 'nullable|string',
-            'role' => ['sometimes', Rule::in(['Super Admin', 'Admin', 'Guide / Editor', 'User'])],
+            'role' => ['sometimes', Rule::in(self::$allowedRoleInputs)],
             'status' => ['sometimes', Rule::in(['Active', 'Inactive', 'Suspended'])],
             'location' => 'nullable|string|max:100',
             'verified' => 'sometimes|boolean',
@@ -121,8 +158,12 @@ class UserController extends Controller
             'bio' => 'nullable|string',
         ]);
 
-        if (isset($validated['role']) && $validated['role'] === 'Super Admin' && (!$currentUser || !$currentUser->isSuperAdmin())) {
-            return $this->errorResponse('Only Super Administrators can assign the Super Admin role.', 403);
+        if (isset($validated['role'])) {
+            $normalizedRole = User::normalizeRole($validated['role']);
+            if ($normalizedRole === User::ROLE_SUPER_ADMIN && (!$currentUser || !$currentUser->isSuperAdmin())) {
+                return $this->errorResponse('Only Super Administrators can assign the Super Admin role.', 403);
+            }
+            $validated['role'] = $normalizedRole;
         }
 
         if (!empty($validated['password'])) {
@@ -144,7 +185,11 @@ class UserController extends Controller
             return $this->errorResponse('User not found.', 404);
         }
 
-        if ($currentUser && $user->id === $currentUser->id) {
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
+
+        if ($currentUser && (int)$user->id === (int)$currentUser->id) {
             return $this->errorResponse('You cannot delete your own account.', 422);
         }
 
@@ -160,8 +205,13 @@ class UserController extends Controller
     /**
      * Get real-time user online and active tracking metrics.
      */
-    public function activeStatus(): JsonResponse
+    public function activeStatus(Request $request): JsonResponse
     {
+        $currentUser = $request->user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
+
         $totalUsers = User::count();
         $onlineUsers = User::where('last_active_at', '>=', now()->subMinutes(5))->count();
         $activeUsers = User::where('status', 'Active')->count();

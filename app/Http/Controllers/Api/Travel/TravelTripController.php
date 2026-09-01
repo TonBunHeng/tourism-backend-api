@@ -122,7 +122,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if (!$trip->is_public && (!$user || ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])))) {
+        if (!$trip->is_public && (!$user || ($trip->user_id !== $user->id && !$user->isAdmin()))) {
             return $this->errorResponse('Access denied. This trip is private.', 403);
         }
 
@@ -144,7 +144,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if ($trip->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied. You can only modify your own trips.', 403);
         }
 
@@ -195,7 +195,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if ($trip->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied. You can only delete your own trips.', 403);
         }
 
@@ -222,7 +222,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if (!$original->is_public && $original->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if (!$original->is_public && $original->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied to duplicate this trip.', 403);
         }
 
@@ -280,7 +280,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if ($trip->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied.', 403);
         }
 
@@ -319,7 +319,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if ($trip->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied.', 403);
         }
 
@@ -347,7 +347,7 @@ class TravelTripController extends Controller
         }
 
         $user = $request->user();
-        if ($trip->user_id !== $user->id && !in_array($user->role, ['Super Admin', 'Admin'])) {
+        if ($trip->user_id !== $user->id && !$user->isAdmin()) {
             return $this->errorResponse('Access denied.', 403);
         }
 

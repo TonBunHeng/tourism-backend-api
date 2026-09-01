@@ -533,12 +533,14 @@ php artisan test
 
 ## 🔑 Default Seeded Accounts
 
-| Name | Role | Email | Password |
-|---|---|---|---|
-| **Ton Bunheng** | **Super Admin** | `admin@tourism.gov.kh` | `password123` |
-| **Sophal Sopheaktra** | **Guide / Editor** | `sopheaktra@tourism.gov.kh` | `password123` |
-| **VIT Vong** | **Tourist (User)** | `vit.vong@example.com` | `password123` |
-| **Ou Sreylin** | **Tourist (User)** | `ou.sreylin@example.com` | `password123` |
+| Name | Role | Email | Password | Frontend Access |
+|---|---|---|---|---|
+| **Ton Bunheng** | **Super Admin** (`super_admin`) | `admin@tourism.gov.kh` | `password123` | `tourism-frontend` (Admin Panel) |
+| **Kosal Visal** | **Admin** (`admin`) | `staff.admin@tourism.gov.kh` | `password123` | `tourism-frontend` (Admin Panel) |
+| **Sophal Sopheaktra** | **Guide / Editor** (`guide_editor`) | `sopheaktra@tourism.gov.kh` | `password123` | `tourism-travel` (Travel Web / Mobile) |
+| **Sokha Chanthou** | **Business Owner** (`business_owner`) | `owner@angkor-restaurant.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
+| **VIT Vong** | **Tourist (User)** (`user`) | `vit.vong@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
+| **Ou Sreylin** | **Tourist (User)** (`user`) | `ou.sreylin@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 
 ---
 

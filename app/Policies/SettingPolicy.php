@@ -8,11 +8,11 @@ class SettingPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->isAdmin();
     }
 
     public function update(User $user): bool
     {
-        return in_array($user->role, ['Super Admin'], true);
+        return $user->isSuperAdmin();
     }
 }

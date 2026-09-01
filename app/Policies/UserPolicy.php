@@ -8,29 +8,29 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->isAdmin();
     }
 
     public function view(User $user, User $model): bool
     {
-        return $user->id === $model->id || in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->id === $model->id || $user->isAdmin();
     }
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['Super Admin', 'Admin'], true);
+        return $user->isAdmin();
     }
 
     public function update(User $user, User $model): bool
     {
         // Super Admin can edit anyone
-        if ($user->role === 'Super Admin') {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Admin can edit Users and Guides, but not other Admins or Super Admins
-        if ($user->role === 'Admin') {
-            return !in_array($model->role, ['Super Admin', 'Admin'], true) || $user->id === $model->id;
+        // Admin can edit Users, Guides, Business Owners, but not Super Admins or other Admins
+        if ($user->isAdmin()) {
+            return (!$model->isSuperAdmin() && (!$model->isAdmin() || $user->id === $model->id));
         }
 
         // Users can only edit themselves
@@ -44,12 +44,12 @@ class UserPolicy
             return false;
         }
 
-        if ($user->role === 'Super Admin') {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        if ($user->role === 'Admin') {
-            return !in_array($model->role, ['Super Admin', 'Admin'], true);
+        if ($user->isAdmin()) {
+            return !$model->isAdmin();
         }
 
         return false;

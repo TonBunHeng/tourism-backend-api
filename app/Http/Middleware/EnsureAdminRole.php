@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Traits\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
@@ -25,13 +26,17 @@ class EnsureAdminRole
             return $this->errorResponse('Unauthenticated.', 401);
         }
 
-        if ($user->status !== 'Active') {
+        if (strtolower($user->status ?? '') !== 'active') {
             return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
-        $allowedRoles = !empty($roles) ? $roles : ['Super Admin', 'Admin', 'Guide / Editor'];
+        $allowedRoles = !empty($roles)
+            ? array_map([User::class, 'normalizeRole'], $roles)
+            : [User::ROLE_SUPER_ADMIN, User::ROLE_ADMIN, User::ROLE_GUIDE_EDITOR];
 
-        if (!in_array($user->role, $allowedRoles, true)) {
+        $userRole = User::normalizeRole($user->role);
+
+        if (!in_array($userRole, $allowedRoles, true)) {
             return $this->errorResponse('Access denied. Administrator privileges required.', 403);
         }
 

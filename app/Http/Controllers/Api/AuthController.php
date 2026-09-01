@@ -238,8 +238,8 @@ class AuthController extends Controller
         }
 
         // Admin Authorization check (Admin Panel is restricted to administrators)
-        $allowedAdminRoles = ['Super Admin', 'Admin', 'Guide / Editor'];
-        if (!in_array($user->role, $allowedAdminRoles, true)) {
+        $allowedAdminRoles = [User::ROLE_SUPER_ADMIN, User::ROLE_ADMIN, User::ROLE_GUIDE_EDITOR, 'Super Admin', 'Admin', 'Guide / Editor'];
+        if (!in_array($user->role, $allowedAdminRoles, true) && !$user->canModerate()) {
             LoginAttempt::create([
                 'email' => $email,
                 'ip_address' => $ip,
