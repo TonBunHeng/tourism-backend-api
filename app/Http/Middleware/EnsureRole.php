@@ -31,6 +31,11 @@ class EnsureRole
             return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
+        // Admin & Super Admin have full access across all role modules
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
         if (empty($roles)) {
             return $next($request);
         }

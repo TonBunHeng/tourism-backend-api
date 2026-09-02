@@ -58,8 +58,19 @@ class AdminBusinessController extends Controller
         $perPage = min((int) $request->input('per_page', 15), 100);
         $businesses = $query->latest()->paginate($perPage);
 
+        $pendingCount = Business::where('verification_status', 'pending')->count();
+        $approvedCount = Business::where('verification_status', 'approved')->count();
+        $rejectedCount = Business::where('verification_status', 'rejected')->count();
+        $totalCount = Business::count();
+
         return $this->successResponse([
             'businesses' => BusinessResource::collection($businesses),
+            'verification_stats' => [
+                'pending' => $pendingCount,
+                'approved' => $approvedCount,
+                'rejected' => $rejectedCount,
+                'total' => $totalCount,
+            ],
             'pagination' => [
                 'current_page' => $businesses->currentPage(),
                 'last_page' => $businesses->lastPage(),

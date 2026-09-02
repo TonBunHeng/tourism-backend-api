@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Facades\Socialite;
 
 class TravelAuthController extends Controller
 {
@@ -378,6 +379,168 @@ class TravelAuthController extends Controller
         $email = $validated['email'] ?? null;
         $name = $validated['name'] ?? null;
         $avatar = $validated['avatar'] ?? null;
+        $accessToken = $validated['access_token'] ?? $validated['token'] ?? null;
+
+        if ($accessToken && (!$fbId || !$email)) {
+            try {
+                $response = Http::get("https://graph.facebook.com/me", [
+                    'fields' => 'id,name,email,picture.type(large)',
+                    'access_token' => $accessToken,
+                ]);
+
+                if ($response->successful()) {
+                    $payload = $response->json();
+                    $fbId = $payload['id'] ?? $fbId;
+                    $email = $payload['email'] ?? $email;
+                    $name = $payload['name'] ?? $name;
+                    $avatar = $payload['picture']['data']['url'] ?? $avatar;
+                }
+            } catch (\Throwable $e) {
+                // proceed with client payload
+            }
+        }
+
+        if (!$email && !$fbId) {
+            return $this->errorResponse('Unable to identify Facebook account. Please provide valid Facebook account details.', 422);
+        }
+
+        $user = null;
+        if ($fbId) {
+            $user = User::where('provider', 'facebook')->where('provider_id', $fbId)->first();
+        }
+
+        if (!$user && $email) {
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                $user->update([
+                    'provider' => 'facebook',
+                    'provider_id' => $fbId ?: ('facebook_' . md5($email)),
+                    'provider_email' => $email,
+                    'avatar' => $user->avatar ?: $avatar,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                    'last_active_at' => now(),
+                ]);
+            }
+        }
+
+        if (!$user) {
+            $user = User::create([
+                'name' => $name ?: 'Facebook Traveler',
+                'email' => $email ?: (($fbId ?: ('facebook_' . time())) . '@facebook.oauth'),
+                'avatar' => $avatar,
+                'role' => 'User',
+                'status' => 'Active',
+                'verified' => true,
+                'provider' => 'facebook',
+                'provider_id' => $fbId ?: ('facebook_' . md5($email)),
+                'provider_email' => $email,
+                'email_verified_at' => now(),
+                'last_active_at' => now(),
+            ]);
+        } else {
+            if ($user->status !== 'Active') {
+                return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
+            }
+            $user->update([
+                'last_active_at' => now(),
+                'avatar' => $avatar ?: $user->avatar,
+            ]);
+        }
+
+        RateLimiter::clear($throttleKey);
+        $token = $user->createToken('travel_facebook_auth_token')->plainTextToken;
+
+        return $this->successResponse([
+            'user' => new TravelUserResource($user),
+            'token' => $token,
+            'token_type' => 'Bearer',
+        ], 'Facebook authentication successful.');
+    }
+
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->stateless()->redirect();
+    }
+
+    public function handleGoogleCallback()
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5174');
+
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
+        } catch (\Throwable $e) {
+            return redirect($frontendUrl . '/login?error=' . urlencode('Google authentication failed.'));
+        }
+
+        $googleId = $googleUser->getId();
+        $email = $googleUser->getEmail();
+        $name = $googleUser->getName();
+        $avatar = $googleUser->getAvatar();
+
+        $user = User::where('provider', 'google')->where('provider_id', $googleId)->first();
+
+        if (!$user && $email) {
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                $user->update([
+                    'provider' => 'google',
+                    'provider_id' => $googleId,
+                    'provider_email' => $email,
+                    'avatar' => $user->avatar ?: $avatar,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                    'last_active_at' => now(),
+                ]);
+            }
+        }
+
+        if (!$user) {
+            $user = User::create([
+                'name' => $name ?: 'Google Traveler',
+                'email' => $email ?: ($googleId . '@google.oauth'),
+                'avatar' => $avatar,
+                'role' => User::ROLE_USER,
+                'status' => 'Active',
+                'verified' => true,
+                'provider' => 'google',
+                'provider_id' => $googleId,
+                'provider_email' => $email,
+                'email_verified_at' => now(),
+                'last_active_at' => now(),
+            ]);
+        } else {
+            if ($user->status !== 'Active') {
+                return redirect($frontendUrl . '/login?error=' . urlencode('Account is ' . strtolower($user->status)));
+            }
+            $user->update([
+                'last_active_at' => now(),
+                'avatar' => $avatar ?: $user->avatar,
+            ]);
+        }
+
+        $token = $user->createToken('travel_google_auth_token')->plainTextToken;
+
+        return redirect($frontendUrl . '/auth/callback?token=' . urlencode($token) . '&user=' . urlencode(json_encode(new TravelUserResource($user))));
+    }
+
+    public function redirectToFacebook()
+    {
+        return Socialite::driver('facebook')->stateless()->redirect();
+    }
+
+    public function handleFacebookCallback()
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5174');
+
+        try {
+            $fbUser = Socialite::driver('facebook')->stateless()->user();
+        } catch (\Throwable $e) {
+            return redirect($frontendUrl . '/login?error=' . urlencode('Facebook authentication failed.'));
+        }
+
+        $fbId = $fbUser->getId();
+        $email = $fbUser->getEmail();
+        $name = $fbUser->getName();
+        $avatar = $fbUser->getAvatar();
 
         $user = User::where('provider', 'facebook')->where('provider_id', $fbId)->first();
 
@@ -388,6 +551,7 @@ class TravelAuthController extends Controller
                     'provider' => 'facebook',
                     'provider_id' => $fbId,
                     'provider_email' => $email,
+                    'avatar' => $user->avatar ?: $avatar,
                     'email_verified_at' => $user->email_verified_at ?? now(),
                     'last_active_at' => now(),
                 ]);
@@ -399,7 +563,7 @@ class TravelAuthController extends Controller
                 'name' => $name ?: 'Facebook Traveler',
                 'email' => $email ?: ($fbId . '@facebook.oauth'),
                 'avatar' => $avatar,
-                'role' => 'User',
+                'role' => User::ROLE_USER,
                 'status' => 'Active',
                 'verified' => true,
                 'provider' => 'facebook',
@@ -410,18 +574,16 @@ class TravelAuthController extends Controller
             ]);
         } else {
             if ($user->status !== 'Active') {
-                return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
+                return redirect($frontendUrl . '/login?error=' . urlencode('Account is ' . strtolower($user->status)));
             }
-            $user->update(['last_active_at' => now()]);
+            $user->update([
+                'last_active_at' => now(),
+                'avatar' => $avatar ?: $user->avatar,
+            ]);
         }
 
-        RateLimiter::clear($throttleKey);
         $token = $user->createToken('travel_facebook_auth_token')->plainTextToken;
 
-        return $this->successResponse([
-            'user' => new TravelUserResource($user),
-            'token' => $token,
-            'token_type' => 'Bearer',
-        ], 'Facebook authentication successful.');
+        return redirect($frontendUrl . '/auth/callback?token=' . urlencode($token) . '&user=' . urlencode(json_encode(new TravelUserResource($user))));
     }
 }

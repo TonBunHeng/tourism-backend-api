@@ -211,4 +211,32 @@ class PlaceController extends Controller
 
         return $this->successResponse(null, 'Place deleted successfully.');
     }
+
+    public function approve(string $id): JsonResponse
+    {
+        $place = Place::find($id);
+
+        if (!$place) {
+            return $this->errorResponse('Place not found.', 404);
+        }
+
+        $place->update(['status' => 'Active']);
+        $place->load(['category', 'province']);
+
+        return $this->successResponse(new PlaceResource($place), "Place '{$place->name}' approved and activated.");
+    }
+
+    public function reject(string $id): JsonResponse
+    {
+        $place = Place::find($id);
+
+        if (!$place) {
+            return $this->errorResponse('Place not found.', 404);
+        }
+
+        $place->update(['status' => 'Inactive']);
+        $place->load(['category', 'province']);
+
+        return $this->successResponse(new PlaceResource($place), "Place '{$place->name}' rejected.");
+    }
 }

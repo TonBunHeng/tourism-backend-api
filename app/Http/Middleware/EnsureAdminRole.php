@@ -30,6 +30,11 @@ class EnsureAdminRole
             return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
+        // Admin & Super Admin have full admin level access
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
         $allowedRoles = !empty($roles)
             ? array_map([User::class, 'normalizeRole'], $roles)
             : [User::ROLE_SUPER_ADMIN, User::ROLE_ADMIN, User::ROLE_GUIDE_EDITOR];

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminBusinessController;
-use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Business\BusinessOwnerController;
 use App\Http\Controllers\Api\CategoryController;
@@ -17,6 +16,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SecurityAlertController;
 use App\Http\Controllers\Api\SystemSettingController;
+use App\Http\Controllers\Api\SystemTrackingController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
 use App\Http\Controllers\Api\UserController;
@@ -68,6 +68,10 @@ Route::prefix('travel')->group(function () {
     Route::post('/auth/login', [TravelAuthController::class, 'login']);
     Route::post('/auth/google', [TravelAuthController::class, 'googleLogin']);
     Route::post('/auth/facebook', [TravelAuthController::class, 'facebookLogin']);
+    Route::get('/auth/google/redirect', [TravelAuthController::class, 'redirectToGoogle']);
+    Route::get('/auth/google/callback', [TravelAuthController::class, 'handleGoogleCallback']);
+    Route::get('/auth/facebook/redirect', [TravelAuthController::class, 'redirectToFacebook']);
+    Route::get('/auth/facebook/callback', [TravelAuthController::class, 'handleFacebookCallback']);
 
     // 1.2 Public Destinations / Places
     Route::get('/places', [TravelPlaceController::class, 'index']);
@@ -269,12 +273,14 @@ Route::prefix('guide')->middleware(['auth:sanctum', 'role:guide_editor,admin,sup
     Route::post('/places', [\App\Http\Controllers\Api\Guide\GuideController::class, 'storePlace']);
     Route::get('/places/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'showPlace']);
     Route::put('/places/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'updatePlace']);
+    Route::delete('/places/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'destroyPlace']);
 
     // Events
     Route::get('/events', [\App\Http\Controllers\Api\Guide\GuideController::class, 'events']);
     Route::post('/events', [\App\Http\Controllers\Api\Guide\GuideController::class, 'storeEvent']);
     Route::get('/events/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'showEvent']);
     Route::put('/events/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'updateEvent']);
+    Route::delete('/events/{id}', [\App\Http\Controllers\Api\Guide\GuideController::class, 'destroyEvent']);
 
     // Galleries / Media
     Route::get('/galleries', [\App\Http\Controllers\Api\Guide\GuideController::class, 'galleries']);
@@ -351,6 +357,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/places', [PlaceController::class, 'store']);
         Route::put('/places/{id}', [PlaceController::class, 'update']);
         Route::delete('/places/{id}', [PlaceController::class, 'destroy']);
+        Route::post('/places/{id}/approve', [PlaceController::class, 'approve']);
+        Route::post('/places/{id}/reject', [PlaceController::class, 'reject']);
 
         // Categories Management
         Route::get('/categories', [CategoryController::class, 'index']);
@@ -434,10 +442,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
 
-        // Audit Logs Management
-        Route::get('/audit-logs', [AuditLogController::class, 'index']);
-        Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
-        Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);
+        // System Tracking (Admin & Super Admin Sidebar Feature)
+        Route::get('/tracking', [SystemTrackingController::class, 'index']);
+        Route::get('/tracking/live', [SystemTrackingController::class, 'liveFeed']);
 
         // Security Alerts & Audit Logs Management
         Route::get('/security-alerts', [SecurityAlertController::class, 'index']);

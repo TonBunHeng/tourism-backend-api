@@ -475,4 +475,58 @@ class GuideController extends Controller
 
         return $this->successResponse($reply, 'Guide reply posted successfully.', 201);
     }
+
+    /**
+     * Delete place (Guide/Editor or Admin).
+     */
+    public function destroyPlace(Request $request, $id): JsonResponse
+    {
+        $place = Place::find($id);
+
+        if (!$place) {
+            return $this->errorResponse('Place not found.', 404);
+        }
+
+        $oldValues = $place->toArray();
+        $placeName = $place->name;
+
+        $place->delete();
+
+        AuditLogger::log(
+            action: 'place.deleted',
+            entityType: 'Place',
+            entityId: (int) $id,
+            description: "Place '{$placeName}' deleted by {$request->user()->name}.",
+            oldValues: $oldValues
+        );
+
+        return $this->successResponse(null, "Place '{$placeName}' deleted successfully.");
+    }
+
+    /**
+     * Delete event (Guide/Editor or Admin).
+     */
+    public function destroyEvent(Request $request, $id): JsonResponse
+    {
+        $event = Event::find($id);
+
+        if (!$event) {
+            return $this->errorResponse('Event not found.', 404);
+        }
+
+        $oldValues = $event->toArray();
+        $eventTitle = $event->title;
+
+        $event->delete();
+
+        AuditLogger::log(
+            action: 'event.deleted',
+            entityType: 'Event',
+            entityId: (int) $id,
+            description: "Event '{$eventTitle}' deleted by {$request->user()->name}.",
+            oldValues: $oldValues
+        );
+
+        return $this->successResponse(null, "Event '{$eventTitle}' deleted successfully.");
+    }
 }
