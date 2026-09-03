@@ -16,7 +16,6 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SecurityAlertController;
 use App\Http\Controllers\Api\SystemSettingController;
-use App\Http\Controllers\Api\SystemTrackingController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
 use App\Http\Controllers\Api\UserController;
@@ -442,11 +441,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
 
-        // System Tracking (Admin & Super Admin Sidebar Feature)
-        Route::get('/tracking', [SystemTrackingController::class, 'index']);
-        Route::get('/tracking/live', [SystemTrackingController::class, 'liveFeed']);
-
-        // Security Alerts & Audit Logs Management
+        // Security Alerts Management
         Route::get('/security-alerts', [SecurityAlertController::class, 'index']);
         Route::get('/security-alerts/export', [SecurityAlertController::class, 'exportData']);
         Route::get('/security-alerts/login-attempts', [SecurityAlertController::class, 'loginAttempts']);

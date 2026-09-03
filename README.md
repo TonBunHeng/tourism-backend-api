@@ -45,7 +45,7 @@ This unified backend powers both the **Admin Management Web (`tourism-admin`)** 
   - [12. Public App Settings](#12-public-app-settings)
   - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
 - [Admin Management API Reference (`/api/*`)](#admin-management-api-reference-api)
-  - [Audit Logs & Security Monitoring](#audit-logs--security-monitoring)
+  - [Security Alerts & IP Defense](#security-alerts--ip-defense)
 - [Standard API Response Format](#standard-api-response-format)
 - [Installation & Setup](#installation--setup)
 - [Testing](#testing)
@@ -438,8 +438,6 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
 | `POST` | `/api/events` | Create event schedule | `admin.role` |
 | `PUT` | `/api/reviews/{id}/status` | Moderate review (`Approved`/`Rejected`) | `admin.role` |
 | `POST` | `/api/reviews/{id}/replies` | Staff reply to review | `admin.role` |
-| `GET` | `/api/audit-logs` | Filter and view system audit records | `admin.role` (`Super Admin`, `Admin`) |
-| `GET` | `/api/audit-logs/export` | Stream CSV export of audit logs | `admin.role` (`Super Admin`, `Admin`) |
 | `GET` | `/api/security-alerts` | View rate limits & intrusion alerts | `admin.role` (`Super Admin`, `Admin`) |
 | `POST` | `/api/security-alerts/block-ip` | Manually block abusive IP | `admin.role` (`Super Admin`, `Admin`) |
 | `PUT` | `/api/deletion-requests/{id}/status` | Process account deletion request | `admin.role` (`Super Admin`) |
@@ -570,7 +568,7 @@ The system provides a complete **Pending Review -> Approved & Active** request m
 
 | Role | Scope & Permissions | Frontend Access | Managed Profile CRUD |
 |---|---|---|---|
-| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings, Audit Logs & IP Blocking | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
+| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings & IP Blocking | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
 | **Admin** (`admin`) | **Full Administrative Access**: Moderate & approve/reject requests, manage all Business Profiles, Places, Events, Media, Reviews & Users | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
 | **Business Owner** (`business_owner`) | **Business Owner Dashboard**: Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies) | `tourism-travel` (`/business/dashboard`) | **Owned Profiles Only** |
 | **Guide / Editor** (`guide_editor`) | **Guide Dashboard**: Full CRUD over Places, Tourism Events, Gallery Media & Review Assistance | `tourism-travel` (`/guide/dashboard`) | **Guide / Editor Scope** |
@@ -578,9 +576,9 @@ The system provides a complete **Pending Review -> Approved & Active** request m
 
 ---
 
-## Real-Time Admin & Super Admin System Tracking (`tourism-admin` -> `tourism-travel`)
+## Real-Time Admin & Super Admin System Monitoring (`tourism-admin` -> `tourism-travel`)
 
-Administrators (`admin`) and Super Administrators (`super_admin`) operating via **`tourism-admin`** possess full telemetry, monitoring, and administrative tracking capabilities over all activity on **`tourism-travel`**:
+Administrators (`admin`) and Super Administrators (`super_admin`) operating via **`tourism-admin`** possess monitoring and administrative capabilities over activity on **`tourism-travel`**:
 
 ### 1. User & Staff Activity Tracking (`/api/users` & `/api/users/active-status`)
 * **Real-time Online Tracking**: Every API request made on `tourism-travel` automatically updates `last_active_at` via `UpdateUserActivity` middleware.
@@ -592,10 +590,5 @@ Administrators (`admin`) and Super Administrators (`super_admin`) operating via 
 
 ### 3. Verification Queue & Request Moderation (`/api/dashboard`)
 * **Pending Requests Tracking**: Track pending business registrations (`verification_status = pending`) from Business Owners and pending place uploads (`status = Pending`) from Guides with direct approval (`/approve`) and rejection (`/reject`) triggers.
-
-### 4. Dedicated Admin Sidebar System Tracking (`/api/tracking` & `/api/tracking/live`)
-* **Sidebar Integration**: Powering the Admin & Super Admin sidebar item for full cross-role telemetry across `tourism-travel`.
-* **Role Breakdown**: Returns live activity telemetry grouped by role (`business_owner`, `guide_editor`, `tourist`, `admin`) with total accounts, online counts, pending verifications, and real-time operational feeds.
-* **Live Feed**: Stream of latest actions taken across all user roles (`GET /api/tracking/live`).
 
 ---

@@ -322,15 +322,14 @@ class GuideController extends Controller
         );
     }
 
-    /**
-     * List galleries/media.
-     */
     public function galleries(Request $request): JsonResponse
     {
-        $query = GalleryMedia::with(['uploader', 'province', 'place']);
+        $query = GalleryMedia::with(['uploader', 'category', 'place.province', 'tags']);
 
-        if ($request->has('province_id')) {
-            $query->where('province_id', $request->input('province_id'));
+        if ($request->filled('province_id')) {
+            $query->whereHas('place', function ($q) use ($request) {
+                $q->where('province_id', $request->input('province_id'));
+            });
         }
 
         $galleries = $query->latest()->paginate((int) $request->input('per_page', 15));

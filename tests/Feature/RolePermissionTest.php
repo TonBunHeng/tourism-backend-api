@@ -74,7 +74,6 @@ class RolePermissionTest extends TestCase
 
         $this->getJson('/api/dashboard')->assertStatus(200);
         $this->getJson('/api/users')->assertStatus(200);
-        $this->getJson('/api/tracking')->assertStatus(200);
         $this->getJson('/api/security-alerts')->assertStatus(200);
         $this->getJson('/api/settings')->assertStatus(200);
 
@@ -143,9 +142,6 @@ class RolePermissionTest extends TestCase
 
         // Guide CANNOT delete users
         $this->deleteJson("/api/users/{$this->tourist->id}")->assertStatus(403);
-
-        // Guide CANNOT view system tracking
-        $this->getJson('/api/tracking')->assertStatus(403);
     }
 
     /**
@@ -164,9 +160,6 @@ class RolePermissionTest extends TestCase
 
         // Business owner CANNOT access admin user management
         $this->getJson('/api/users')->assertStatus(403);
-
-        // Business owner CANNOT access system tracking
-        $this->getJson('/api/tracking')->assertStatus(403);
     }
 
     /**
