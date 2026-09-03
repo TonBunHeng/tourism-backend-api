@@ -1,17 +1,17 @@
-# 🏛️ AngkorVerses Backend API
+# AngkorVerses Backend API
 
 A comprehensive, production-ready central RESTful API backend for the **AngkorVerses System**, built with Laravel, MySQL, and Laravel Sanctum.
 
-This unified backend powers both the **Admin Management Web (`tourism-frontend`)** and the **Travel/User Client Applications (`tourism-travel` Tourist Web and the Tourist Android Mobile App)**.
+This unified backend powers both the **Admin Management Web (`tourism-admin`)** and the **Travel/User Client Applications (`tourism-travel` Tourist Web and the Tourist Android Mobile App)**.
 
 ---
 
-## 🏛️ Architecture Overview
+## Architecture Overview
 
 ```text
-                               Laravel Backend API
-                               tourism-backend-api
-                                        │
+                                Laravel Backend API
+                                tourism-backend-api
+                                         │
                  ┌──────────────────────┴──────────────────────┐
                  │                                             │
                  ▼                                             ▼
@@ -19,7 +19,7 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
            `/api/*`                                     `/api/travel/*`
                  │                                             │
                  ▼                                     ┌───────┴───────┐
-          tourism-frontend                             │               │
+          tourism-admin                                │               │
            Admin Web App                               ▼               ▼
                                                 tourism-travel     Android App
                                                   Tourist Web    Tourist Mobile
@@ -27,10 +27,10 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
 
 ---
 
-## 📋 Table of Contents
-- [Tech Stack](#-tech-stack)
-- [Roles & Permissions](#-roles--permissions)
-- [Travel / User API Reference (`/api/travel/*`)](#-travel--user-api-reference-apitravel)
+## Table of Contents
+- [Tech Stack](#tech-stack)
+- [Roles & Permissions](#roles--permissions)
+- [Travel / User API Reference (`/api/travel/*`)](#travel--user-api-reference-apitravel)
   - [1. Authentication](#1-authentication)
   - [2. Tourist Destinations (Places)](#2-tourist-destinations-places)
   - [3. Provinces & Locations](#3-provinces--locations)
@@ -44,17 +44,17 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
   - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
   - [12. Public App Settings](#12-public-app-settings)
   - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
-- [Admin Management API Reference (`/api/*`)](#-admin-management-api-reference-api)
+- [Admin Management API Reference (`/api/*`)](#admin-management-api-reference-api)
   - [Audit Logs & Security Monitoring](#audit-logs--security-monitoring)
-- [Standard API Response Format](#-standard-api-response-format)
-- [Installation & Setup](#-installation--setup)
-- [Testing](#-testing)
-- [Default Seeded Accounts](#-default-seeded-accounts)
-- [Project Directory Structure](#-project-directory-structure)
+- [Standard API Response Format](#standard-api-response-format)
+- [Installation & Setup](#installation--setup)
+- [Testing](#testing)
+- [Default Seeded Accounts](#default-seeded-accounts)
+- [Project Directory Structure](#project-directory-structure)
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework:** Laravel 11.x / 12.x (PHP 8.2+)
 - **Database:** MySQL 8.0+ / SQLite for testing
@@ -64,7 +64,7 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
 
 ---
 
-## 👥 Roles & Permissions
+## Roles & Permissions
 
 | Role | Target Client | Capabilities |
 |---|---|---|
@@ -77,7 +77,7 @@ This unified backend powers both the **Admin Management Web (`tourism-frontend`)
 
 ---
 
-## 🚀 Travel / User API Reference (`/api/travel/*`)
+## Travel / User API Reference (`/api/travel/*`)
 
 All Travel endpoints share the `/api/travel` prefix and are consumed identically by **`tourism-travel`** and the **Android Mobile App**.
 
@@ -322,7 +322,6 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 - `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Heritage Master*, *Wanderlust Explorer*, *Trip Planner Pioneer*, *Gallery Contributor*, *Cambodia Heritage Champion*).
 - `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve user's unlocked badges and automatically calculate new achievements.
 
-
 ---
 
 ### 11. Privacy & Deletion Requests
@@ -362,7 +361,7 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.vercel.app/`).
 
-#### 🤖 AI Tourism Chat Assistant
+#### AI Tourism Chat Assistant
 - **Endpoint:** `POST /api/travel/ai/chat` (or `POST /api/travel/ai-chat`)
 - **Auth:** Public / Bearer Token
 - **Request Body:**
@@ -377,7 +376,7 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
   ```
 - **Returns:** Intelligent response powered by Gemini AI with verified Cambodian landmarks, local practical tips, and suggested follow-up questions.
 
-#### 🌟 Smart Recommendations
+#### Smart Recommendations
 - **Endpoint:** `POST /api/travel/ai/recommendations` (or `POST /api/travel/recommendations`)
 - **Request Body:**
   ```json
@@ -390,7 +389,7 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
   }
   ```
 
-#### 🗓️ Day-by-Day Smart Itinerary Generator
+#### Day-by-Day Smart Itinerary Generator
 - **Endpoint:** `POST /api/travel/ai/itineraries` (or `POST /api/travel/itineraries`)
 - **Request Body:**
   ```json
@@ -402,11 +401,11 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
   }
   ```
 
-#### ☀️ Live Weather & Travel Suitability Advice
+#### Live Weather & Travel Suitability Advice
 - **Endpoint:** `GET /api/travel/ai/weather?province=Siem+Reap&days=3`
 - **Returns:** Real-time temperature, precipitation risk, forecast, and tailored travel advice in both English and Khmer.
 
-#### 💱 Currency Reference & Converter
+#### Currency Reference & Converter
 - **Get Rate:** `GET /api/travel/ai/currency`
 - **Convert:** `POST /api/travel/ai/currency/convert`
   ```json
@@ -417,15 +416,15 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
   }
   ```
 
-#### 🚗 Transit & Transport Estimator
+#### Transit & Transport Estimator
 - **Endpoint:** `GET /api/travel/ai/transport?origin=Phnom+Penh&destination=Siem+Reap&travelers=2`
 
-#### 🩺 AI System Status
+#### AI System Status
 - **Endpoint:** `GET /api/travel/ai/status` (or `GET /api/ai/status`)
 
 ---
 
-## 🔒 Admin Management API Reference (`/api/*`)
+## Admin Management API Reference (`/api/*`)
 
 | Method | Endpoint | Description | Guard / Role |
 |---|---|---|---|
@@ -448,7 +447,7 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
 
 ---
 
-## 📦 Standard API Response Format
+## Standard API Response Format
 
 ```json
 {
@@ -477,7 +476,7 @@ Error response:
 
 ---
 
-## ⚙️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - **PHP**: ^8.2 or ^8.3 with `pdo`, `mbstring`, `openssl`, `bcmath`, `curl` extensions enabled
@@ -517,11 +516,11 @@ php artisan serve --host=0.0.0.0 --port=8000
 composer run serve
 ```
 
-> **Note:** Serving with `--host=0.0.0.0` allows both **Admin Web App (`tourism-frontend`)** and **Travel Client Apps (`tourism-travel` / Mobile App)** on your Local LAN IP (e.g. `http://192.168.x.x:8000`) to connect with identical data and CORS permissions.
+> **Note:** Serving with `--host=0.0.0.0` allows both **Admin Web App (`tourism-admin`)** and **Travel Client Apps (`tourism-travel` / Mobile App)** on your Local LAN IP (e.g. `http://192.168.x.x:8000`) to connect with identical data and CORS permissions.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 Run the automated PHPUnit test suite covering authentication, destinations, reviews, favorites, AI assistance, deletion requests, and role authorization:
 
@@ -531,12 +530,12 @@ php artisan test
 
 ---
 
-## 🔑 Default Seeded Accounts
+## Default Seeded Accounts
 
 | Name | Role | Email | Password | Frontend Access |
 |---|---|---|---|---|
-| **Ton Bunheng** | **Super Admin** (`super_admin`) | `admin@tourism.gov.kh` | `password123` | `tourism-frontend` (Admin Panel) |
-| **Kosal Visal** | **Admin** (`admin`) | `staff.admin@tourism.gov.kh` | `password123` | `tourism-frontend` (Admin Panel) |
+| **Ton Bunheng** | **Super Admin** (`super_admin`) | `admin@tourism.gov.kh` | `password123` | `tourism-admin` (Admin Panel) |
+| **Kosal Visal** | **Admin** (`admin`) | `staff.admin@tourism.gov.kh` | `password123` | `tourism-admin` (Admin Panel) |
 | **Sophal Sopheaktra** | **Guide / Editor** (`guide_editor`) | `sopheaktra@tourism.gov.kh` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 | **Sokha Chanthou** | **Business Owner** (`business_owner`) | `owner@angkor-restaurant.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 | **VIT Vong** | **Tourist (User)** (`user`) | `vit.vong@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
@@ -544,7 +543,7 @@ php artisan test
 
 ---
 
-## 📋 Pending Review & Verification Workflow
+## Pending Review & Verification Workflow
 
 The system provides a complete **Pending Review -> Approved & Active** request moderation pipeline for **Business Owners** and **Guides**:
 
@@ -567,21 +566,21 @@ The system provides a complete **Pending Review -> Approved & Active** request m
 
 ---
 
-## 🔐 Role-Based Access Control & Profile CRUD Matrix
+## Role-Based Access Control & Profile CRUD Matrix
 
 | Role | Scope & Permissions | Frontend Access | Managed Profile CRUD |
 |---|---|---|---|
-| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings, Audit Logs & IP Blocking | `tourism-frontend` & `tourism-travel` | **Full Global Access** (Any Profile) |
-| **Admin** (`admin`) | **Full Administrative Access**: Moderate & approve/reject requests, manage all Business Profiles, Places, Events, Media, Reviews & Users | `tourism-frontend` & `tourism-travel` | **Full Global Access** (Any Profile) |
+| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings, Audit Logs & IP Blocking | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
+| **Admin** (`admin`) | **Full Administrative Access**: Moderate & approve/reject requests, manage all Business Profiles, Places, Events, Media, Reviews & Users | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
 | **Business Owner** (`business_owner`) | **Business Owner Dashboard**: Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies) | `tourism-travel` (`/business/dashboard`) | **Owned Profiles Only** |
 | **Guide / Editor** (`guide_editor`) | **Guide Dashboard**: Full CRUD over Places, Tourism Events, Gallery Media & Review Assistance | `tourism-travel` (`/guide/dashboard`) | **Guide / Editor Scope** |
 | **Tourist / User** (`user`) | **Public Explorer**: View destinations, search businesses, save favorites, write reviews, plan trips, AI assistant | `tourism-travel` | **Read-Only / User Content** |
 
 ---
 
-## 📊 Real-Time Admin & Super Admin System Tracking (`tourism-frontend` -> `tourism-travel`)
+## Real-Time Admin & Super Admin System Tracking (`tourism-admin` -> `tourism-travel`)
 
-Administrators (`admin`) and Super Administrators (`super_admin`) operating via **`tourism-frontend`** possess full telemetry, monitoring, and administrative tracking capabilities over all activity on **`tourism-travel`**:
+Administrators (`admin`) and Super Administrators (`super_admin`) operating via **`tourism-admin`** possess full telemetry, monitoring, and administrative tracking capabilities over all activity on **`tourism-travel`**:
 
 ### 1. User & Staff Activity Tracking (`/api/users` & `/api/users/active-status`)
 * **Real-time Online Tracking**: Every API request made on `tourism-travel` automatically updates `last_active_at` via `UpdateUserActivity` middleware.
@@ -600,6 +599,3 @@ Administrators (`admin`) and Super Administrators (`super_admin`) operating via 
 * **Live Feed**: Stream of latest actions taken across all user roles (`GET /api/tracking/live`).
 
 ---
-
-## 📄 License
-This project is open-sourced software licensed under the [MIT license](LICENSE).

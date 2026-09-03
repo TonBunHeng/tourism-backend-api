@@ -295,7 +295,7 @@ Route::prefix('guide')->middleware(['auth:sanctum', 'role:guide_editor,admin,sup
 /*
 |--------------------------------------------------------------------------
 | 3. ADMIN & MANAGEMENT REST API
-| Consumed by tourism-frontend (Admin Web Panel)
+| Consumed by tourism-admin (Admin Web Panel)
 | Strictly protected with Sanctum Authentication and Admin Role Authorization
 |--------------------------------------------------------------------------
 */
