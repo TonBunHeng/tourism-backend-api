@@ -143,6 +143,10 @@ class UserController extends Controller
             return $this->errorResponse('Only Super Administrators can modify Super Admin accounts.', 403);
         }
 
+        if ($user->isAdmin() && (!$currentUser || !$currentUser->isSuperAdmin()) && (int)$user->id !== (int)$currentUser->id) {
+            return $this->errorResponse('Administrators cannot modify other Administrator accounts.', 403);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:100',
             'email' => ['sometimes', 'required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
@@ -197,6 +201,10 @@ class UserController extends Controller
             return $this->errorResponse('Only Super Administrators can delete Super Admin accounts.', 403);
         }
 
+        if ($user->isAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Administrators cannot delete other Administrator accounts.', 403);
+        }
+
         $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully.');
@@ -220,6 +228,10 @@ class UserController extends Controller
 
         if ($user->isSuperAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
             return $this->errorResponse('Only Super Administrators can modify Super Admin account status.', 403);
+        }
+
+        if ($user->isAdmin() && (!$currentUser || !$currentUser->isSuperAdmin()) && (int)$user->id !== (int)$currentUser->id) {
+            return $this->errorResponse('Administrators cannot modify other Administrator account status.', 403);
         }
 
         $validated = $request->validate([

@@ -49,7 +49,7 @@ class TravelAuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'location' => $validated['location'] ?? null,
             'bio' => $validated['bio'] ?? null,
-            'role' => User::normalizeRole($validated['role'] ?? User::ROLE_USER),
+            'role' => User::ROLE_USER,
             'status' => 'Active',
             'verified' => true,
             'email_verified_at' => now(),

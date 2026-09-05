@@ -15,6 +15,11 @@ class SystemSettingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
+
         $group = $request->query('group');
         $query = SystemSetting::query();
 
@@ -29,6 +34,10 @@ class SystemSettingController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
         $validated = $request->validate([
             'settings' => 'required|array',
             'settings.*.key' => 'required|string|max:100',

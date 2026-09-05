@@ -231,6 +231,11 @@ class ReviewController extends Controller
 
     public function addReply(Request $request, string $id): JsonResponse
     {
+        return $this->reply($request, $id);
+    }
+
+    public function reply(Request $request, string $id): JsonResponse
+    {
         $review = Review::find($id);
 
         if (!$review) {

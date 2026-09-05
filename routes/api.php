@@ -422,9 +422,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/{userId}/achievements', [UserAchievementController::class, 'userAchievements']);
         Route::put('/achievements/{id}/toggle', [UserAchievementController::class, 'toggleUnlocked']);
 
-        // System Settings Admin Management
-        Route::get('/settings', [SystemSettingController::class, 'index']);
-        Route::put('/settings', [SystemSettingController::class, 'update']);
+        // System Settings Admin Management (Restricted to Admin & Super Admin)
+        Route::middleware('role:admin,super_admin')->group(function () {
+            Route::get('/settings', [SystemSettingController::class, 'index']);
+            Route::put('/settings', [SystemSettingController::class, 'update']);
+
+            // Security Alerts Management
+            Route::get('/security-alerts', [SecurityAlertController::class, 'index']);
+            Route::get('/security-alerts/export', [SecurityAlertController::class, 'exportData']);
+            Route::get('/security-alerts/login-attempts', [SecurityAlertController::class, 'loginAttempts']);
+            Route::delete('/security-alerts/login-attempts/{id}', [SecurityAlertController::class, 'destroyLoginAttempt']);
+            Route::delete('/security-alerts/login-attempts', [SecurityAlertController::class, 'clearLoginAttempts']);
+            Route::get('/security-alerts/blocked-ips', [SecurityAlertController::class, 'blockedIps']);
+            Route::post('/security-alerts/block-ip', [SecurityAlertController::class, 'blockIp']);
+            Route::post('/security-alerts/unblock-ip', [SecurityAlertController::class, 'unblockIp']);
+            Route::put('/security-alerts/{id}/read', [SecurityAlertController::class, 'markAsRead']);
+            Route::post('/security-alerts/mark-all-read', [SecurityAlertController::class, 'markAllRead']);
+            Route::delete('/security-alerts/{id}', [SecurityAlertController::class, 'destroy']);
+            Route::delete('/security-alerts', [SecurityAlertController::class, 'clearAll']);
+        });
 
         // Notifications Admin APIs & Web Push
         Route::get('/notifications', [NotificationController::class, 'index']);
@@ -440,19 +456,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/notifications/vapid-key', [NotificationController::class, 'vapidPublicKey']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/notifications', [NotificationController::class, 'clearAll']);
-
-        // Security Alerts Management
-        Route::get('/security-alerts', [SecurityAlertController::class, 'index']);
-        Route::get('/security-alerts/export', [SecurityAlertController::class, 'exportData']);
-        Route::get('/security-alerts/login-attempts', [SecurityAlertController::class, 'loginAttempts']);
-        Route::delete('/security-alerts/login-attempts/{id}', [SecurityAlertController::class, 'destroyLoginAttempt']);
-        Route::delete('/security-alerts/login-attempts', [SecurityAlertController::class, 'clearLoginAttempts']);
-        Route::get('/security-alerts/blocked-ips', [SecurityAlertController::class, 'blockedIps']);
-        Route::post('/security-alerts/block-ip', [SecurityAlertController::class, 'blockIp']);
-        Route::post('/security-alerts/unblock-ip', [SecurityAlertController::class, 'unblockIp']);
-        Route::put('/security-alerts/{id}/read', [SecurityAlertController::class, 'markAsRead']);
-        Route::post('/security-alerts/mark-all-read', [SecurityAlertController::class, 'markAllRead']);
-        Route::delete('/security-alerts/{id}', [SecurityAlertController::class, 'destroy']);
-        Route::delete('/security-alerts', [SecurityAlertController::class, 'clearAll']);
     });
 });

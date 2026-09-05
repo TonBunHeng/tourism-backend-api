@@ -13,11 +13,11 @@ class UpdateTripRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'title' => 'sometimes|required|string|max:150',
             'destination' => 'nullable|string|max:150',
             'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'end_date' => ['nullable', 'date'],
             'budget' => 'nullable|numeric|min:0',
             'currency' => 'nullable|string|max:10',
             'travelers' => 'nullable|integer|min:1|max:50',
@@ -37,5 +37,11 @@ class UpdateTripRequest extends FormRequest
             'itineraries.*.sort_order' => 'nullable|integer',
             'itineraries.*.is_completed' => 'nullable|boolean',
         ];
+
+        if ($this->filled('start_date')) {
+            $rules['end_date'][] = 'after_or_equal:start_date';
+        }
+
+        return $rules;
     }
 }

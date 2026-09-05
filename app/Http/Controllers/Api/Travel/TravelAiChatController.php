@@ -36,7 +36,7 @@ class TravelAiChatController extends Controller
             'language' => 'nullable|string|max:10',
         ]);
 
-        $user = $request->user();
+        $user = $request->user('sanctum') ?? $request->user();
         $sessionId = $validated['session_id'] ?? ($user ? ('user_' . $user->id . '_' . date('Ymd')) : ('guest_' . Str::random(16)));
 
         $context = [];
@@ -61,6 +61,10 @@ class TravelAiChatController extends Controller
                 'language' => $validated['language'] ?? 'en',
             ]
         );
+
+        if ($user && !$conversation->user_id) {
+            $conversation->update(['user_id' => $user->id]);
+        }
 
         // Record User Message
         $conversation->messages()->create([

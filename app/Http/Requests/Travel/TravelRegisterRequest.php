@@ -22,7 +22,7 @@ class TravelRegisterRequest extends FormRequest
             'address' => 'nullable|string|max:100',
             'bio' => 'nullable|string|max:1000',
             'avatar' => 'nullable|string',
-            'role' => 'nullable|string|in:user,business_owner,guide_editor,User,Business Owner,Guide / Editor,tourist',
+            'role' => 'nullable|string|in:user,tourist,User',
         ];
     }
 }

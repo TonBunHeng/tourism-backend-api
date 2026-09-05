@@ -34,7 +34,7 @@ class TravelOAuthController extends Controller
      */
     public function handleGoogleCallback(Request $request): RedirectResponse|JsonResponse
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5174');
 
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
