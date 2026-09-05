@@ -203,6 +203,35 @@ class UserController extends Controller
     }
 
     /**
+     * Update user account status (Active, Inactive, Suspended).
+     */
+    public function updateStatus(Request $request, string $id): JsonResponse
+    {
+        $currentUser = $request->user();
+        $user = User::find($id);
+
+        if (!$user) {
+            return $this->errorResponse('User not found.', 404);
+        }
+
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            return $this->errorResponse('Access denied. Administrator privileges required.', 403);
+        }
+
+        if ($user->isSuperAdmin() && (!$currentUser || !$currentUser->isSuperAdmin())) {
+            return $this->errorResponse('Only Super Administrators can modify Super Admin account status.', 403);
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['Active', 'Inactive', 'Suspended'])],
+        ]);
+
+        $user->update(['status' => $validated['status']]);
+
+        return $this->successResponse(new UserResource($user), 'User status updated successfully.');
+    }
+
+    /**
      * Get real-time user online and active tracking metrics.
      */
     public function activeStatus(Request $request): JsonResponse
