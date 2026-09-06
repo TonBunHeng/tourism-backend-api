@@ -72,7 +72,7 @@ class User extends Authenticatable
         return match ($cleaned) {
             'super_admin', 'superadmin' => self::ROLE_SUPER_ADMIN,
             'admin', 'administrator' => self::ROLE_ADMIN,
-            'guide_editor', 'guide', 'editor' => self::ROLE_GUIDE_EDITOR,
+            'guide_editor', 'tourism_content_editor', 'content_editor', 'guide', 'editor' => self::ROLE_GUIDE_EDITOR,
             'business_owner', 'business', 'owner' => self::ROLE_BUSINESS_OWNER,
             'user', 'tourist', 'member' => self::ROLE_USER,
             default => self::ROLE_USER,

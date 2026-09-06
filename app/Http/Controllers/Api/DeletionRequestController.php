@@ -27,11 +27,11 @@ class DeletionRequestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = DeletionRequest::with(['user', 'processedBy', 'items']);
-
-        if (!$user->isAdmin()) {
-            $query->where('user_id', $user->id);
+        if (!$user || !$user->isSuperAdmin()) {
+            return $this->errorResponse('Access denied. Super Administrator privileges required.', 403);
         }
+
+        $query = DeletionRequest::with(['user', 'processedBy', 'items']);
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -48,6 +48,11 @@ class DeletionRequestController extends Controller
 
     public function analytics(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->isSuperAdmin()) {
+            return $this->errorResponse('Access denied. Super Administrator privileges required.', 403);
+        }
+
         $timeframe = $request->query('timeframe', '2026');
         $targetYear = is_numeric($timeframe) ? (int)$timeframe : 2026;
 
@@ -132,7 +137,7 @@ class DeletionRequestController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'request_type' => ['required', Rule::in(['account', 'item'])],
+            'request_type' => ['nullable', Rule::in(['account', 'item'])],
             'reason' => 'required|string',
             'additional_info' => 'nullable|string',
             'urgency' => ['nullable', Rule::in(['critical', 'high', 'medium', 'low'])],
@@ -147,9 +152,9 @@ class DeletionRequestController extends Controller
 
         $delRequest = DeletionRequest::create([
             'user_id' => $user->id,
-            'request_type' => $validated['request_type'],
+            'request_type' => $validated['request_type'] ?? 'account',
             'reason' => $validated['reason'],
-            'additional_info' => $validated['additional_info'] ?? null,
+            'additional_info' => $validated['additional_info'] ?? ($request->input('email') ? 'Account email: ' . $request->input('email') : null),
             'urgency' => $validated['urgency'] ?? 'low',
             'status' => 'pending',
         ]);
@@ -189,6 +194,11 @@ class DeletionRequestController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->isSuperAdmin()) {
+            return $this->errorResponse('Access denied. Super Administrator privileges required.', 403);
+        }
+
         $delRequest = DeletionRequest::with(['user', 'processedBy', 'items'])->find($id);
 
         if (!$delRequest) {
@@ -200,6 +210,11 @@ class DeletionRequestController extends Controller
 
     public function updateStatus(Request $request, string $id): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->isSuperAdmin()) {
+            return $this->errorResponse('Access denied. Super Administrator privileges required.', 403);
+        }
+
         $delRequest = DeletionRequest::with(['user', 'items'])->find($id);
 
         if (!$delRequest) {

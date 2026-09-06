@@ -321,7 +321,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/dashboard/stats', [DashboardController::class, 'index']);
         Route::get('/reports/analytics', [ReportController::class, 'analytics']);
-        Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
         Route::get('/reviews/analytics', [ReviewController::class, 'analytics']);
         Route::get('/favorites/analytics', [FavoriteController::class, 'analytics']);
 
@@ -355,7 +354,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/places/{id}', [PlaceController::class, 'show']);
         Route::post('/places', [PlaceController::class, 'store']);
         Route::put('/places/{id}', [PlaceController::class, 'update']);
-        Route::delete('/places/{id}', [PlaceController::class, 'destroy']);
         Route::post('/places/{id}/approve', [PlaceController::class, 'approve']);
         Route::post('/places/{id}/reject', [PlaceController::class, 'reject']);
 
@@ -364,28 +362,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/categories/{id}', [CategoryController::class, 'show']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
         // Provinces Management
         Route::get('/provinces', [ProvinceController::class, 'index']);
         Route::get('/provinces/{id}', [ProvinceController::class, 'show']);
         Route::post('/provinces', [ProvinceController::class, 'store']);
         Route::put('/provinces/{id}', [ProvinceController::class, 'update']);
-        Route::delete('/provinces/{id}', [ProvinceController::class, 'destroy']);
 
         // Events Management
         Route::get('/events', [EventController::class, 'index']);
         Route::get('/events/{id}', [EventController::class, 'show']);
         Route::post('/events', [EventController::class, 'store']);
         Route::put('/events/{id}', [EventController::class, 'update']);
-        Route::delete('/events/{id}', [EventController::class, 'destroy']);
 
         // Galleries Management
         Route::get('/galleries', [GalleryController::class, 'index']);
         Route::get('/galleries/{id}', [GalleryController::class, 'show']);
         Route::post('/galleries', [GalleryController::class, 'store']);
         Route::put('/galleries/{id}', [GalleryController::class, 'update']);
-        Route::delete('/galleries/{id}', [GalleryController::class, 'destroy']);
 
         // Reviews Moderation
         Route::get('/reviews', [ReviewController::class, 'index']);
@@ -411,11 +405,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/favorites/{placeId}', [FavoriteController::class, 'destroy']);
         Route::patch('/favorites/{id}/toggle-visited', [FavoriteController::class, 'toggleVisited']);
 
-        // Deletion Requests Admin Moderation
-        Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
+        // Deletion Requests Submission (Super Admin, Admin, and Tourism Content Editor can submit deletion requests)
         Route::post('/deletion-requests', [DeletionRequestController::class, 'store']);
-        Route::get('/deletion-requests/{id}', [DeletionRequestController::class, 'show']);
-        Route::put('/deletion-requests/{id}/status', [DeletionRequestController::class, 'updateStatus']);
+
+        // Direct Item Deletions & Deletion Requests Moderation (Restricted to Super Admin Only)
+        Route::middleware('role:super_admin')->group(function () {
+            // Direct immediate deletions
+            Route::delete('/places/{id}', [PlaceController::class, 'destroy']);
+            Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+            Route::delete('/provinces/{id}', [ProvinceController::class, 'destroy']);
+            Route::delete('/events/{id}', [EventController::class, 'destroy']);
+            Route::delete('/galleries/{id}', [GalleryController::class, 'destroy']);
+
+            // Deletion requests moderation, inspection & status approval/rejection
+            Route::get('/deletion-requests/analytics', [DeletionRequestController::class, 'analytics']);
+            Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
+            Route::get('/deletion-requests/{id}', [DeletionRequestController::class, 'show']);
+            Route::put('/deletion-requests/{id}/status', [DeletionRequestController::class, 'updateStatus']);
+        });
 
         // Achievements Admin Management
         Route::get('/achievements', [UserAchievementController::class, 'index']);

@@ -31,8 +31,8 @@ class EnsureRole
             return $this->errorResponse('Account is ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
-        // Admin & Super Admin have full access across all role modules
-        if ($user->isAdmin()) {
+        // Super Admin has full access across all role modules
+        if ($user->isSuperAdmin()) {
             return $next($request);
         }
 
@@ -42,6 +42,11 @@ class EnsureRole
 
         $allowedRoles = array_map([User::class, 'normalizeRole'], $roles);
         $userRole = User::normalizeRole($user->role);
+
+        // Admin has access if admin role is allowed
+        if (in_array(User::ROLE_ADMIN, $allowedRoles, true) && $user->isAdmin()) {
+            return $next($request);
+        }
 
         if (!in_array($userRole, $allowedRoles, true)) {
             return $this->errorResponse('Access denied. You do not have the required role permissions.', 403);

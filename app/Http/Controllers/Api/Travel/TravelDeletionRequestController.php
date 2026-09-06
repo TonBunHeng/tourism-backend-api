@@ -35,13 +35,17 @@ class TravelDeletionRequestController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
+        $requestType = $validated['request_type'] ?? 'account';
+        $additionalInfo = $validated['additional_info'] 
+            ?? ($request->input('email') ? 'Account email: ' . $request->input('email') : null);
+
         $deletionRequest = DeletionRequest::create([
             'user_id' => $user->id,
-            'request_type' => $validated['request_type'],
+            'request_type' => $requestType,
             'reason' => $validated['reason'],
-            'additional_info' => $validated['additional_info'] ?? null,
+            'additional_info' => $additionalInfo,
             'status' => 'pending',
-            'urgency' => 'low',
+            'urgency' => $validated['urgency'] ?? 'low',
         ]);
 
         if (!empty($validated['items'])) {

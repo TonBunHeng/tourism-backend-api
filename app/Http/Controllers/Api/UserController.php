@@ -23,6 +23,7 @@ class UserController extends Controller
         User::ROLE_USER,
         'Super Admin',
         'Admin',
+        'Tourism Content Editor',
         'Guide / Editor',
         'Business Owner',
         'User',

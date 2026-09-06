@@ -185,4 +185,240 @@ class BugFixesTest extends TestCase
         $this->putJson('/api/settings', ['settings' => []])->assertStatus(403);
         $this->getJson('/api/security-alerts')->assertStatus(403);
     }
+
+    public function test_all_roles_can_add_and_remove_favorites_without_error(): void
+    {
+        $category = Category::create(['name' => 'Temples', 'slug' => 'temples']);
+        $province = Province::create(['name' => 'Siem Reap', 'slug' => 'siem-reap']);
+        $place = Place::create([
+            'name' => 'Bayon Temple',
+            'category_id' => $category->id,
+            'province_id' => $province->id,
+            'address' => 'Angkor Thom, Siem Reap',
+            'status' => 'Active',
+        ]);
+
+        $businessOwner = User::create([
+            'name' => 'Business Owner',
+            'email' => 'biz_fav@test.com',
+            'password_hash' => Hash::make('secret123'),
+            'role' => User::ROLE_BUSINESS_OWNER,
+            'status' => 'Active',
+        ]);
+
+        $users = [$this->tourist, $businessOwner, $this->guideEditor, $this->admin1, $this->superAdmin];
+
+        foreach ($users as $user) {
+            Sanctum::actingAs($user, ['*']);
+
+            // Add to favorites
+            $response = $this->postJson('/api/travel/favorites', [
+                'place_id' => $place->id,
+                'visited' => false,
+            ]);
+
+            $response->assertStatus(201)
+                ->assertJson([
+                    'success' => true,
+                    'message' => 'Destination saved to favorites successfully.',
+                ]);
+
+            $this->assertDatabaseHas('favorites', [
+                'user_id' => $user->id,
+                'place_id' => $place->id,
+            ]);
+
+            // Remove from favorites
+            $deleteResponse = $this->deleteJson("/api/travel/favorites/{$place->id}");
+            $deleteResponse->assertStatus(200)
+                ->assertJson([
+                    'success' => true,
+                    'message' => 'Removed from favorites successfully.',
+                ]);
+        }
+    }
+
+    public function test_admin_roles_cannot_login_via_travel_api(): void
+    {
+        $adminRoles = [$this->superAdmin, $this->admin1, $this->guideEditor];
+
+        foreach ($adminRoles as $staff) {
+            $response = $this->postJson('/api/travel/auth/login', [
+                'email' => $staff->email,
+                'password' => 'secret123',
+            ]);
+
+            $response->assertStatus(403)
+                ->assertJson([
+                    'success' => false,
+                    'message' => 'Access restricted. Administrative accounts (Super Admin, Admin, Tourism Content Editor) must sign in via the Admin Portal.',
+                ]);
+        }
+
+        // Tourist can log in
+        $touristResponse = $this->postJson('/api/travel/auth/login', [
+            'email' => $this->tourist->email,
+            'password' => 'secret123',
+        ]);
+        $touristResponse->assertStatus(200);
+    }
+
+    public function test_deletion_requests_restricted_to_super_admin_only(): void
+    {
+        // 1. Tourism Content Editor cannot access deletion-requests or analytics
+        Sanctum::actingAs($this->guideEditor, ['*']);
+        $this->getJson('/api/deletion-requests')->assertStatus(403);
+        $this->getJson('/api/deletion-requests/analytics')->assertStatus(403);
+
+        // 2. Admin cannot access deletion-requests or analytics
+        Sanctum::actingAs($this->admin1, ['*']);
+        $this->getJson('/api/deletion-requests')->assertStatus(403);
+        $this->getJson('/api/deletion-requests/analytics')->assertStatus(403);
+
+        // 3. Super Admin CAN access deletion-requests and analytics
+        Sanctum::actingAs($this->superAdmin, ['*']);
+        $resIndex = $this->getJson('/api/deletion-requests');
+        $resIndex->assertStatus(200);
+
+        $resAnalytics = $this->getJson('/api/deletion-requests/analytics');
+        $resAnalytics->assertStatus(200);
+
+        // 4. Create a deletion request from tourist
+        $deletionReq = \App\Models\DeletionRequest::create([
+            'user_id' => $this->tourist->id,
+            'request_type' => 'account',
+            'reason' => 'Need account deletion',
+            'status' => 'pending',
+            'urgency' => 'medium',
+        ]);
+
+        // 5. Admin cannot update deletion request status
+        Sanctum::actingAs($this->admin1, ['*']);
+        $this->putJson("/api/deletion-requests/{$deletionReq->id}/status", [
+            'status' => 'approved',
+        ])->assertStatus(403);
+
+        // 6. Super Admin can update deletion request status
+        Sanctum::actingAs($this->superAdmin, ['*']);
+        $this->putJson("/api/deletion-requests/{$deletionReq->id}/status", [
+            'status' => 'approved',
+        ])->assertStatus(200);
+
+        // 7. Admin and Tourism Content Editor CAN submit deletion requests
+        Sanctum::actingAs($this->admin1, ['*']);
+        $resAdminSubmit = $this->postJson('/api/deletion-requests', [
+            'request_type' => 'item',
+            'reason' => 'Admin requesting event removal',
+            'items' => [
+                [
+                    'item_type' => 'event',
+                    'item_id' => 999,
+                    'item_name' => 'Water Festival',
+                ]
+            ]
+        ]);
+        $resAdminSubmit->assertStatus(201);
+
+        Sanctum::actingAs($this->guideEditor, ['*']);
+        $resEditorSubmit = $this->postJson('/api/deletion-requests', [
+            'request_type' => 'item',
+            'reason' => 'Tourism Content Editor requesting place removal',
+            'items' => [
+                [
+                    'item_type' => 'place',
+                    'item_id' => 888,
+                    'item_name' => 'Angkor Temple',
+                ]
+            ]
+        ]);
+        $resEditorSubmit->assertStatus(201);
+
+        // 8. Direct deletions are restricted to Super Admin only
+        $event = \App\Models\Event::create([
+            'title' => 'Direct Delete Test Event',
+            'category' => 'Cultural',
+            'location' => 'Phnom Penh',
+            'start_date' => '2026-10-01',
+            'status' => 'Upcoming',
+        ]);
+
+        // Editor cannot directly delete event
+        Sanctum::actingAs($this->guideEditor, ['*']);
+        $this->deleteJson("/api/events/{$event->id}")->assertStatus(403);
+
+        // Admin cannot directly delete event
+        Sanctum::actingAs($this->admin1, ['*']);
+        $this->deleteJson("/api/events/{$event->id}")->assertStatus(403);
+
+        // Super Admin CAN directly delete event
+        Sanctum::actingAs($this->superAdmin, ['*']);
+        $this->deleteJson("/api/events/{$event->id}")->assertStatus(200);
+        $this->assertDatabaseMissing('events', ['id' => $event->id]);
+
+        // 9. Tourist (User) CAN submit deletion request (even if request_type is omitted)
+        $freshTourist = User::create([
+            'name' => 'VIT Vong',
+            'email' => 'vit.vong@example.com',
+            'password_hash' => Hash::make('secret123'),
+            'role' => User::ROLE_USER,
+            'status' => 'Active',
+        ]);
+
+        Sanctum::actingAs($freshTourist, ['*']);
+        $resTouristDel = $this->postJson('/api/travel/deletion-requests', [
+            'email' => $freshTourist->email,
+            'reason' => 'Delete Account VIT Vong',
+        ]);
+        $resTouristDel->assertStatus(201);
+        $this->assertDatabaseHas('deletion_requests', [
+            'user_id' => $freshTourist->id,
+            'request_type' => 'account',
+            'reason' => 'Delete Account VIT Vong',
+            'status' => 'pending',
+        ]);
+
+        // 10. Business Owner CAN submit deletion request
+        $businessOwner = \App\Models\User::where('role', \App\Models\User::ROLE_BUSINESS_OWNER)->first() ?? \App\Models\User::create([
+            'name' => 'Sokha Chanthou',
+            'email' => 'owner_del_test@example.com',
+            'password_hash' => \Illuminate\Support\Facades\Hash::make('secret123'),
+            'role' => \App\Models\User::ROLE_BUSINESS_OWNER,
+            'status' => 'Active',
+        ]);
+
+        Sanctum::actingAs($businessOwner, ['*']);
+        $resOwnerDel = $this->postJson('/api/travel/deletion-requests', [
+            'email' => $businessOwner->email,
+            'reason' => 'Business owner closing account',
+            'request_type' => 'account',
+        ]);
+        $resOwnerDel->assertStatus(201);
+        $this->assertDatabaseHas('deletion_requests', [
+            'user_id' => $businessOwner->id,
+            'request_type' => 'account',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_super_admin_has_all_achievements_unlocked(): void
+    {
+        // Check and award achievements for Super Admin
+        \App\Services\AchievementManager::checkAndAward($this->superAdmin);
+
+        $superAdminAchievements = \App\Models\UserAchievement::where('user_id', $this->superAdmin->id)->get();
+        $this->assertNotEmpty($superAdminAchievements);
+        foreach ($superAdminAchievements as $ach) {
+            $this->assertTrue((bool)$ach->unlocked, "Achievement {$ach->achievement_name} should be unlocked for Super Admin");
+        }
+
+        // Test API response
+        Sanctum::actingAs($this->superAdmin, ['*']);
+        $response = $this->getJson('/api/achievements');
+        $response->assertStatus(200);
+        $data = $response->json('data');
+        $this->assertNotEmpty($data);
+        foreach ($data as $badge) {
+            $this->assertTrue((bool)$badge['unlocked'], "Badge {$badge['achievement_name']} should be unlocked in API");
+        }
+    }
 }

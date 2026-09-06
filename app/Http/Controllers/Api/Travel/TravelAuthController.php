@@ -145,6 +145,20 @@ class TravelAuthController extends Controller
             return $this->errorResponse('Your account is currently ' . strtolower($user->status) . '. Please contact support.', 403);
         }
 
+        $normalizedRole = User::normalizeRole($user->role);
+        if (in_array($normalizedRole, [User::ROLE_SUPER_ADMIN, User::ROLE_ADMIN, User::ROLE_GUIDE_EDITOR], true)) {
+            LoginAttempt::create([
+                'email' => $email,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'success' => false,
+                'failure_reason' => 'Administrative account restricted from travel login: ' . $user->role,
+                'attempted_at' => now(),
+            ]);
+
+            return $this->errorResponse('Access restricted. Administrative accounts (Super Admin, Admin, Tourism Content Editor) must sign in via the Admin Portal.', 403);
+        }
+
         LoginAttempt::create([
             'email' => $email,
             'ip_address' => $ip,

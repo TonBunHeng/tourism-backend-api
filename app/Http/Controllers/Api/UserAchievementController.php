@@ -15,14 +15,27 @@ class UserAchievementController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $achievements = UserAchievement::where('user_id', $userId)->get();
+        $user = $request->user();
+        if ($user->isSuperAdmin()) {
+            UserAchievement::where('user_id', $user->id)
+                ->where('unlocked', false)
+                ->update(['unlocked' => true, 'unlocked_at' => now()]);
+        }
+
+        $achievements = UserAchievement::where('user_id', $user->id)->get();
 
         return $this->successResponse(UserAchievementResource::collection($achievements), 'Achievements retrieved.');
     }
 
     public function userAchievements(string $userId): JsonResponse
     {
+        $targetUser = \App\Models\User::find($userId);
+        if ($targetUser && $targetUser->isSuperAdmin()) {
+            UserAchievement::where('user_id', $targetUser->id)
+                ->where('unlocked', false)
+                ->update(['unlocked' => true, 'unlocked_at' => now()]);
+        }
+
         $achievements = UserAchievement::where('user_id', $userId)->get();
 
         return $this->successResponse(UserAchievementResource::collection($achievements), 'User achievements retrieved.');

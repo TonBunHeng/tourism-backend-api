@@ -68,12 +68,13 @@ This unified backend powers both the **Admin Management Web (`tourism-admin`)** 
 
 | Role | Target Client | Capabilities |
 |---|---|---|
-| `User` | Tourist Web & Android Mobile App | Browse destinations, post reviews, save wishlist, AI travel assistant, submit deletion requests |
-| `Guide / Editor` | Admin Portal | Manage destination content, event schedules, media gallery |
-| `Admin` | Admin Portal | Review moderation, analytics, user management, support moderation |
-| `Super Admin` | Admin Portal | Full administrative access, system configuration, user deletion approval |
+| `User` | Tourist Web (`tourism-travel`) & Mobile App | Browse destinations, post reviews, save wishlist, AI travel assistant, submit deletion requests |
+| `Business Owner` | Tourist Web (`tourism-travel` at `/business/dashboard`) | Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies) |
+| `Tourism Content Editor` | Admin Portal (`tourism-admin`) | Manage destination content, events, media gallery, categories, and provinces |
+| `Admin` | Admin Portal (`tourism-admin`) | Review moderation, analytics, user management, support moderation (deletion requests restricted to Super Admin) |
+| `Super Admin` | Admin Portal (`tourism-admin`) | Full administrative access, system configuration, user deletion requests moderation & approval, security & IP blocking |
 
-> **Security Rule:** Normal `User` role accounts are strictly blocked (`HTTP 403 Forbidden`) from accessing Admin management endpoints.
+> **Security Rule:** Administrative and Staff accounts (`Super Admin`, `Admin`, `Tourism Content Editor`) work exclusively on **`tourism-admin`**. Public accounts (`User`, `Business Owner`) work exclusively on **`tourism-travel`**.
 
 ---
 
@@ -534,16 +535,16 @@ php artisan test
 |---|---|---|---|---|
 | **Ton Bunheng** | **Super Admin** (`super_admin`) | `admin@tourism.gov.kh` | `password123` | `tourism-admin` (Admin Panel) |
 | **Kosal Visal** | **Admin** (`admin`) | `staff.admin@tourism.gov.kh` | `password123` | `tourism-admin` (Admin Panel) |
-| **Sophal Sopheaktra** | **Guide / Editor** (`guide_editor`) | `sopheaktra@tourism.gov.kh` | `password123` | `tourism-travel` (Travel Web / Mobile) |
+| **Sophal Sopheaktra** | **Tourism Content Editor** (`guide_editor`) | `sopheaktra@tourism.gov.kh` | `password123` | `tourism-admin` (Admin Panel) |
 | **Sokha Chanthou** | **Business Owner** (`business_owner`) | `owner@angkor-restaurant.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 | **VIT Vong** | **Tourist (User)** (`user`) | `vit.vong@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 | **Ou Sreylin** | **Tourist (User)** (`user`) | `ou.sreylin@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 
 ---
 
-## Pending Review & Verification Workflow
+## Pending Review & Verification Workflow`
 
-The system provides a complete **Pending Review -> Approved & Active** request moderation pipeline for **Business Owners** and **Guides**:
+The system provides a complete **Pending Review -> Approved & Active** request moderation pipeline for **Business Owners** and **Tourism Content Editors**:
 
 ### 1. Business Registration Requests (from Business Owners)
 * **Submit Request**: When a Business Owner registers a new business listing via `POST /api/business/businesses`, `verification_status` is set to `pending` (*Awaiting Admin Verification*).
@@ -553,14 +554,26 @@ The system provides a complete **Pending Review -> Approved & Active** request m
   * `POST /api/businesses/{id}/reject` (or `/api/admin/businesses/{id}/reject`): Rejects the business, records `rejection_reason`, and notifies the owner.
   * `POST /api/businesses/{id}/suspend` & `POST /api/businesses/{id}/activate`: Administrative state toggles.
 
-### 2. Destination / Place Upload Requests (from Guides & Editors)
-* **Submit Request**: When a Guide/Editor uploads a new destination via `POST /api/guide/places`, `status` defaults to `Pending` (*Pending Admin Review*).
+### 2. Destination / Place Upload Requests (from Tourism Content Editors)
+* **Submit Request**: When a Tourism Content Editor uploads a new destination via `POST /api/guide/places` (or via `tourism-admin`), `status` defaults to `Pending` (*Pending Admin Review*).
 * **Admin Moderation Endpoints**:
   * `POST /api/places/{id}/approve`: Approves and activates the destination (`status` = `Active`).
   * `POST /api/places/{id}/reject`: Rejects the destination (`status` = `Inactive`).
 
 ### 3. Unified Admin Dashboard Request Queue (`/api/dashboard`)
-* `GET /api/dashboard` includes `pending_verifications_count`, `pending_businesses`, `pending_places`, and a `pending_requests` list containing pending applications from Business Owners & Guides with direct approve/reject URLs.
+* `GET /api/dashboard` includes `pending_verifications_count`, `pending_businesses`, `pending_places`, and a `pending_requests` list containing pending applications from Business Owners & Tourism Content Editors with direct approve/reject URLs.
+
+### 4. Account & Item Deletion Workflow (Super Admin Approval Pipeline)
+* **Tourist (User) & Business Owner Account Deletion (`tourism-travel`)**:
+  * Tourists and Business Owners can submit an official account deletion / GDPR erasure request via `/deletion-request` (`POST /api/travel/deletion-requests`).
+  * Submissions default to `request_type: account` with `status: pending` and trigger an alert notification to the Super Administrator.
+* **Staff Item Deletion (`tourism-admin`)**:
+  * When an **Admin** or **Tourism Content Editor** deletes an item (Place, Event, Gallery, Category, Province) in `tourism-admin`, it submits a deletion ticket via `POST /api/deletion-requests` with `status: pending`.
+* **Super Admin Moderation & Approval (`tourism-admin` at `/deletion-requests`)**:
+  * Only the **Super Administrator** has access to the `/deletion-requests` dashboard and moderation endpoints (`/api/deletion-requests/*`) to:
+    * **Approve**: Permanently deletes the requested target user account, business, or item from the database.
+    * **Reject**: Declines the deletion request, records notes, and preserves the account or content intact.
+  * **Direct Deletions**: Super Administrators possess direct immediate deletion privileges across all modules (`DELETE /api/events/{id}`, `DELETE /api/places/{id}`, etc.).
 
 ---
 
@@ -568,10 +581,10 @@ The system provides a complete **Pending Review -> Approved & Active** request m
 
 | Role | Scope & Permissions | Frontend Access | Managed Profile CRUD |
 |---|---|---|---|
-| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings & IP Blocking | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
-| **Admin** (`admin`) | **Full Administrative Access**: Moderate & approve/reject requests, manage all Business Profiles, Places, Events, Media, Reviews & Users | `tourism-admin` & `tourism-travel` | **Full Global Access** (Any Profile) |
+| **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings, Deletion Requests approval/erasure & IP Blocking | `tourism-admin` (Admin Panel) | **Full Global Access** (Any Profile) |
+| **Admin** (`admin`) | **Full Administrative Access**: Manage Business Profiles, Places, Events, Media, Reviews & Users (Deletion Requests restricted to Super Admin) | `tourism-admin` (Admin Panel) | **Full Global Access** (Any Profile) |
+| **Tourism Content Editor** (`guide_editor`) | **Content Management**: Full CRUD over Places, Events, Media Galleries, Categories & Provinces | `tourism-admin` (Admin Panel) | **Content Editor Scope** |
 | **Business Owner** (`business_owner`) | **Business Owner Dashboard**: Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies) | `tourism-travel` (`/business/dashboard`) | **Owned Profiles Only** |
-| **Guide / Editor** (`guide_editor`) | **Guide Dashboard**: Full CRUD over Places, Tourism Events, Gallery Media & Review Assistance | `tourism-travel` (`/guide/dashboard`) | **Guide / Editor Scope** |
 | **Tourist / User** (`user`) | **Public Explorer**: View destinations, search businesses, save favorites, write reviews, plan trips, AI assistant | `tourism-travel` | **Read-Only / User Content** |
 
 ---

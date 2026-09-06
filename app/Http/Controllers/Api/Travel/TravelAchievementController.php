@@ -69,6 +69,12 @@ class TravelAchievementController extends Controller
             );
         }
 
+        if ($user->isSuperAdmin()) {
+            UserAchievement::where('user_id', $user->id)
+                ->where('unlocked', false)
+                ->update(['unlocked' => true, 'unlocked_at' => now()]);
+        }
+
         // Check user activities to automatically award badges
         $favCount = Favorite::where('user_id', $user->id)->count();
         $reviewCount = Review::where('user_id', $user->id)->count();

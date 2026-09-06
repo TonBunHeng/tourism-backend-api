@@ -63,55 +63,67 @@ class AchievementManager
      */
     public static function checkAndAward(User $user): void
     {
-        // Ensure achievement records exist
-        foreach (self::$badges as $badge) {
-            UserAchievement::firstOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'achievement_name' => $badge['name'],
-                ],
-                [
-                    'description' => $badge['description'],
-                    'icon' => $badge['icon'],
-                    'unlocked' => false,
-                ]
-            );
-        }
+        try {
+            // Ensure achievement records exist
+            foreach (self::$badges as $badge) {
+                UserAchievement::firstOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'achievement_name' => $badge['name'],
+                    ],
+                    [
+                        'description' => $badge['description'],
+                        'icon' => $badge['icon'],
+                        'unlocked' => false,
+                    ]
+                );
+            }
 
-        $favCount = Favorite::where('user_id', $user->id)->count();
-        $reviewCount = Review::where('user_id', $user->id)->count();
-        $tripCount = Trip::where('user_id', $user->id)->count();
-        $likeCount = GalleryLike::where('user_id', $user->id)->count();
-        $mediaCount = GalleryMedia::where('author_name', $user->name)->count();
+            // Super Admin has all achievements unlocked
+            if ($user->isSuperAdmin()) {
+                foreach (self::$badges as $badge) {
+                    self::unlockBadge($user, $badge['name']);
+                }
+                return;
+            }
 
-        // 1. Favorites >= 1
-        if ($favCount >= 1) {
-            self::unlockBadge($user, 'Angkor Explorer');
-        }
+            $favCount = Favorite::where('user_id', $user->id)->count();
+            $reviewCount = Review::where('user_id', $user->id)->count();
+            $tripCount = Trip::where('user_id', $user->id)->count();
+            $likeCount = GalleryLike::where('user_id', $user->id)->count();
+            $mediaCount = GalleryMedia::where('uploaded_by_user_id', $user->id)->count();
 
-        // 2. Reviews >= 1
-        if ($reviewCount >= 1) {
-            self::unlockBadge($user, 'Heritage Master');
-        }
+            // 1. Favorites >= 1
+            if ($favCount >= 1) {
+                self::unlockBadge($user, 'Angkor Explorer');
+            }
 
-        // 3. Favorites >= 5
-        if ($favCount >= 5) {
-            self::unlockBadge($user, 'Wanderlust Explorer');
-        }
+            // 2. Reviews >= 1
+            if ($reviewCount >= 1) {
+                self::unlockBadge($user, 'Heritage Master');
+            }
 
-        // 4. Trips >= 1
-        if ($tripCount >= 1) {
-            self::unlockBadge($user, 'Trip Planner Pioneer');
-        }
+            // 3. Favorites >= 5
+            if ($favCount >= 5) {
+                self::unlockBadge($user, 'Wanderlust Explorer');
+            }
 
-        // 5. Gallery engagement
-        if ($likeCount >= 1 || $mediaCount >= 1) {
-            self::unlockBadge($user, 'Gallery Contributor');
-        }
+            // 4. Trips >= 1
+            if ($tripCount >= 1) {
+                self::unlockBadge($user, 'Trip Planner Pioneer');
+            }
 
-        // 6. Cambodia Heritage Champion (Trips >= 2 or Favorites >= 10)
-        if ($tripCount >= 2 || $favCount >= 10 || ($favCount >= 3 && $reviewCount >= 2)) {
-            self::unlockBadge($user, 'Cambodia Heritage Champion');
+            // 5. Gallery engagement
+            if ($likeCount >= 1 || $mediaCount >= 1) {
+                self::unlockBadge($user, 'Gallery Contributor');
+            }
+
+            // 6. Cambodia Heritage Champion (Trips >= 2 or Favorites >= 10)
+            if ($tripCount >= 2 || $favCount >= 10 || ($favCount >= 3 && $reviewCount >= 2)) {
+                self::unlockBadge($user, 'Cambodia Heritage Champion');
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed checking user achievements: ' . $e->getMessage());
         }
     }
 
@@ -129,13 +141,14 @@ class AchievementManager
             ]);
 
             // Create notification for unlocked achievement
-            Notification::create([
+            Notification::createNotification([
                 'user_id' => $user->id,
                 'type' => 'achievement',
+                'category' => 'Achievements',
                 'title' => 'Achievement Unlocked: ' . $badgeName,
-                'message' => 'Congratulations! You unlocked the "' . $badgeName . '" badge.',
+                'description' => 'Congratulations! You unlocked the "' . $badgeName . '" badge.',
                 'link' => '/achievements',
-                'is_read' => false,
+                'read' => false,
             ]);
         }
     }
