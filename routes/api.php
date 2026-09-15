@@ -41,6 +41,23 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/', function () {
+    return response()->json([
+        'success' => true,
+        'service' => 'AngkorVerses API Backend',
+        'status' => 'active',
+        'version' => '1.0.0',
+        'endpoints' => [
+            'health_check' => url('/api/health'),
+            'places' => url('/api/travel/places'),
+            'categories' => url('/api/travel/categories'),
+            'events' => url('/api/travel/events'),
+            'businesses' => url('/api/travel/businesses'),
+            'settings' => url('/api/travel/settings'),
+        ],
+    ]);
+});
+
 Route::get('/health', function () {
     return response()->json([
         'success' => true,
@@ -329,6 +346,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Businesses Management & Verification Workflow
         Route::get('/businesses', [AdminBusinessController::class, 'index']);
+        Route::post('/businesses', [AdminBusinessController::class, 'store']);
         Route::get('/businesses/{id}', [AdminBusinessController::class, 'show']);
         Route::put('/businesses/{id}', [AdminBusinessController::class, 'update']);
         Route::delete('/businesses/{id}', [AdminBusinessController::class, 'destroy']);
@@ -340,6 +358,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Admin explicit alias (/api/admin/businesses/*)
         Route::prefix('admin')->group(function () {
             Route::get('/businesses', [AdminBusinessController::class, 'index']);
+            Route::post('/businesses', [AdminBusinessController::class, 'store']);
             Route::get('/businesses/{id}', [AdminBusinessController::class, 'show']);
             Route::put('/businesses/{id}', [AdminBusinessController::class, 'update']);
             Route::delete('/businesses/{id}', [AdminBusinessController::class, 'destroy']);

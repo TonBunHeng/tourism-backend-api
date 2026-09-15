@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\AdminBusinessStatusRequest;
+use App\Http\Requests\Business\StoreBusinessRequest;
 use App\Http\Requests\Business\UpdateBusinessRequest;
 use App\Http\Resources\BusinessDetailResource;
 use App\Http\Resources\BusinessResource;
@@ -78,6 +79,38 @@ class AdminBusinessController extends Controller
                 'total' => $businesses->total(),
             ],
         ], 'Businesses retrieved successfully for administration.');
+    }
+
+    /**
+     * Create a new business directly by Administrator.
+     */
+    public function store(StoreBusinessRequest $request): JsonResponse
+    {
+        $admin = $request->user();
+        $validated = $request->validated();
+
+        $validated['owner_id'] = $request->input('owner_id', $admin->id);
+        $validated['status'] = $request->input('status', 'active');
+        $validated['verification_status'] = $request->input('verification_status', 'approved');
+        $validated['verified_at'] = now();
+        $validated['verified_by'] = $admin->id;
+
+        $business = Business::create($validated);
+        $business->load(['owner', 'category', 'province', 'images', 'services', 'hours', 'promotions']);
+
+        AuditLogger::log(
+            action: 'business.admin_created',
+            entityType: 'Business',
+            entityId: $business->id,
+            description: "Business '{$business->name}' was created directly by administrator {$admin->name}.",
+            newValues: $business->toArray()
+        );
+
+        return $this->successResponse(
+            new BusinessDetailResource($business),
+            'Business registered and approved successfully by administrator.',
+            201
+        );
     }
 
     /**
