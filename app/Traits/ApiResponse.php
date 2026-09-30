@@ -25,6 +25,14 @@ trait ApiResponse
     }
 
     /**
+     * Return a created (201) JSON response.
+     */
+    protected function createdResponse(mixed $data = null, string $message = 'Resource created successfully.', array $meta = []): JsonResponse
+    {
+        return $this->successResponse($data, $message, 201, $meta);
+    }
+
+    /**
      * Return an error JSON response.
      */
     protected function errorResponse(string $message = 'An error occurred.', int $code = 400, mixed $errors = null): JsonResponse

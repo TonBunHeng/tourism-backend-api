@@ -224,4 +224,69 @@ class BusinessOwnershipTest extends TestCase
 
         $res->assertStatus(403);
     }
+
+    /**
+     * 9. Public travel registration supports Business Owner role.
+     */
+    public function test_public_registration_allows_business_owner_role(): void
+    {
+        // 9.1 Register with display string "Business Owner"
+        $resDisplay = $this->postJson('/api/travel/auth/register', [
+            'name' => 'New Business Owner Display',
+            'email' => 'new_owner_display@test.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'Business Owner',
+        ]);
+
+        $resDisplay->assertStatus(201);
+        $resDisplay->assertJsonPath('data.user.role', 'business_owner');
+        $token = $resDisplay->json('data.token');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new_owner_display@test.com',
+            'role' => 'business_owner',
+        ]);
+
+        // Verify the new token can access business owner endpoints
+        $profileRes = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/business/profile');
+        $profileRes->assertStatus(200);
+
+        // 9.2 Register with snake_case "business_owner"
+        $resSnake = $this->postJson('/api/travel/auth/register', [
+            'name' => 'New Business Owner Snake',
+            'email' => 'new_owner_snake@test.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'business_owner',
+        ]);
+
+        $resSnake->assertStatus(201);
+        $resSnake->assertJsonPath('data.user.role', 'business_owner');
+
+        // 9.3 Regular tourist registration defaults to 'user'
+        $resTourist = $this->postJson('/api/travel/auth/register', [
+            'name' => 'New Tourist User',
+            'email' => 'new_tourist@test.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'tourist',
+        ]);
+
+        $resTourist->assertStatus(201);
+        $resTourist->assertJsonPath('data.user.role', 'user');
+
+        // 9.4 Disallowed admin roles are rejected with 422
+        $resAdmin = $this->postJson('/api/travel/auth/register', [
+            'name' => 'Malicious Admin Request',
+            'email' => 'malicious_admin@test.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'admin',
+        ]);
+
+        $resAdmin->assertStatus(422);
+        $resAdmin->assertJsonValidationErrors(['role']);
+    }
 }

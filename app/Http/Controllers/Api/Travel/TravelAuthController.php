@@ -42,6 +42,13 @@ class TravelAuthController extends Controller
         $validated = $request->validated();
         RateLimiter::hit($throttleKey, 60);
 
+        // Determine role: public registration allows 'user' (default) or 'business_owner'
+        $requestedRole = $validated['role'] ?? User::ROLE_USER;
+        $assignedRole = User::normalizeRole($requestedRole);
+        if ($assignedRole !== User::ROLE_BUSINESS_OWNER) {
+            $assignedRole = User::ROLE_USER;
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -49,7 +56,7 @@ class TravelAuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'location' => $validated['location'] ?? null,
             'bio' => $validated['bio'] ?? null,
-            'role' => User::ROLE_USER,
+            'role' => $assignedRole,
             'status' => 'Active',
             'verified' => true,
             'email_verified_at' => now(),
@@ -58,16 +65,19 @@ class TravelAuthController extends Controller
 
         $token = $user->createToken('travel_auth_token')->plainTextToken;
 
+        $roleLabel = $user->role === User::ROLE_BUSINESS_OWNER ? 'Business Owner' : 'User';
+
         \App\Models\Notification::createNotification([
             'type' => 'user',
             'category' => 'Users',
-            'title' => "New User Registered: {$user->name}",
-            'description' => "{$user->name} ({$user->email}) joined AngkorVerses platform.",
+            'title' => "New {$roleLabel} Registered: {$user->name}",
+            'description' => "{$user->name} ({$user->email}) joined AngkorVerses platform as {$roleLabel}.",
             'link' => '/users',
             'read' => false,
             'data' => [
                 'user_id' => $user->id,
                 'email' => $user->email,
+                'role' => $user->role,
                 'location' => $user->location,
             ]
         ]);
