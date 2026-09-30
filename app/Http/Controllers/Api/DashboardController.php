@@ -58,7 +58,6 @@ class DashboardController extends Controller
         $topPlaces = Place::with(['category', 'province'])
             ->orderBy('rating', 'desc')
             ->orderBy('reviews_count', 'desc')
-            ->limit(6)
             ->get()
             ->map(function ($place) {
                 return [
