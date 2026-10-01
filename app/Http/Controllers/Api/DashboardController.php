@@ -58,6 +58,7 @@ class DashboardController extends Controller
         $topPlaces = Place::with(['category', 'province'])
             ->orderBy('rating', 'desc')
             ->orderBy('reviews_count', 'desc')
+            ->limit(10)
             ->get()
             ->map(function ($place) {
                 return [
@@ -75,7 +76,7 @@ class DashboardController extends Controller
 
         // Category distribution with real percentages and colors
         $palette = ['bg-blue-500', 'bg-purple-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-indigo-500'];
-        $categories = Category::withCount('places')->get();
+        $categories = Category::withCount('places')->orderBy('places_count', 'desc')->take(10)->get();
         $categoryDistribution = $categories->map(function ($cat, $index) use ($palette) {
             return [
                 'id' => $cat->id,
