@@ -32,9 +32,15 @@ class TravelBusinessController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Business::public()
-            ->with(['category', 'province', 'images'])
+        $user = auth('sanctum')->user();
+        
+        $query = Business::with(['category', 'province', 'images'])
             ->withCount(['images', 'services', 'reviews']);
+
+        // Travel users can see all businesses
+        if (!$user || $user->role !== 'user') {
+            $query->public();
+        }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->input('category_id'));
@@ -98,10 +104,10 @@ class TravelBusinessController extends Controller
             return $this->errorResponse('Business not found.', 404);
         }
 
-        // Only approved & active businesses are visible publicly, unless viewed by owner or admin
-        $user = $request->user();
+        // Only approved & active businesses are visible publicly, unless viewed by owner, admin, or travel user
+        $user = $request->user('sanctum');
         if (!$business->isApproved() || !$business->isActive()) {
-            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin())) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
                 return $this->errorResponse('This business is currently not available publicly.', 403);
             }
         }
@@ -119,8 +125,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         $services = $business->services()->where('is_available', true)->get();
@@ -138,8 +151,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         return $this->successResponse(
@@ -155,8 +175,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         return $this->successResponse(
@@ -172,8 +199,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         $promotions = $business->promotions()->active()->get();
@@ -191,8 +225,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         $events = Event::where('business_id', $business->id)->latest()->get();
@@ -210,8 +251,15 @@ class TravelBusinessController extends Controller
     {
         $business = Business::find($id);
 
-        if (!$business || (!$business->isApproved() || !$business->isActive())) {
-            return $this->errorResponse('Business not found or unavailable.', 404);
+        if (!$business) {
+            return $this->errorResponse('Business not found.', 404);
+        }
+
+        $user = $request->user('sanctum');
+        if (!$business->isApproved() || !$business->isActive()) {
+            if (!$user || ($user->id !== $business->owner_id && !$user->isAdmin() && $user->role !== 'user')) {
+                return $this->errorResponse('Business not found or unavailable.', 404);
+            }
         }
 
         $reviews = Review::with(['user', 'replies.user', 'images'])
