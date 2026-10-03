@@ -119,7 +119,12 @@ class FavoriteController extends Controller
         $query = Favorite::with(['place.category', 'place.province', 'user']);
 
         if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
-            $query->whereYear('created_at', $targetYear);
+            $query->where(function ($q) use ($targetYear) {
+                $q->whereYear('saved_date', $targetYear)
+                  ->orWhere(function ($sq) use ($targetYear) {
+                      $sq->whereNull('saved_date')->whereYear('created_at', $targetYear);
+                  });
+            });
         }
 
         if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
@@ -160,7 +165,12 @@ class FavoriteController extends Controller
 
         $catScopeQuery = Favorite::query();
         if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
-            $catScopeQuery->whereYear('created_at', $targetYear);
+            $catScopeQuery->where(function ($q) use ($targetYear) {
+                $q->whereYear('saved_date', $targetYear)
+                  ->orWhere(function ($sq) use ($targetYear) {
+                      $sq->whereNull('saved_date')->whereYear('created_at', $targetYear);
+                  });
+            });
         }
         if ($statusUpper === 'VISITED') {
             $catScopeQuery->where('visited', true);
@@ -251,9 +261,19 @@ class FavoriteController extends Controller
 
         foreach ($months as $idx => $mName) {
             $mNum = $idx + 1;
-            $mQuery = (clone $monthBaseQuery)->whereMonth('created_at', $mNum);
+            $mQuery = (clone $monthBaseQuery)->where(function ($q) use ($mNum) {
+                $q->whereMonth('saved_date', $mNum)
+                  ->orWhere(function ($sq) use ($mNum) {
+                      $sq->whereNull('saved_date')->whereMonth('created_at', $mNum);
+                  });
+            });
             if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
-                $mQuery->whereYear('created_at', $targetYear);
+                $mQuery->where(function ($q) use ($targetYear) {
+                    $q->whereYear('saved_date', $targetYear)
+                      ->orWhere(function ($sq) use ($targetYear) {
+                          $sq->whereNull('saved_date')->whereYear('created_at', $targetYear);
+                      });
+                });
             }
 
             $realCount = $mQuery->count();
@@ -272,7 +292,7 @@ class FavoriteController extends Controller
             ];
         }
 
-        $recentFavorites = $allFavorites->take(20);
+        $recentFavorites = $allFavorites->take(50);
 
         return $this->successResponse([
             'overview' => [

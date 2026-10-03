@@ -337,9 +337,19 @@ class EventSeeder extends Seeder
             ],
         ];
 
-        foreach ($events as $eventData) {
+        $eventDates = [
+            '2026-01-12 10:00:00', '2026-02-15 14:00:00', '2026-03-08 11:30:00',
+            '2026-04-10 09:15:00', '2026-05-18 16:00:00', '2026-06-21 13:45:00',
+            '2026-07-14 15:20:00', '2026-08-19 12:10:00', '2026-09-05 10:30:00',
+        ];
+
+        foreach ($events as $eIdx => $eventData) {
             $tags = $eventData['tags'] ?? [];
             unset($eventData['tags']);
+
+            $dateTs = $eventDates[$eIdx % count($eventDates)];
+            $eventData['created_at'] = $dateTs;
+            $eventData['updated_at'] = $dateTs;
 
             $event = Event::updateOrCreate(
                 ['title' => $eventData['title']],

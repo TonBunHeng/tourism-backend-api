@@ -45,7 +45,7 @@ class DashboardController extends Controller
 
         $avgReviewRating = Review::avg('rating');
         $avgPlaceRating = Place::avg('rating');
-        $averageRating = $avgReviewRating ?: ($avgPlaceRating ?: 4.8);
+        $averageRating = $avgReviewRating ?: ($avgPlaceRating ?: 0.0);
 
         // User status & active tracking counts
         $activeUsers = User::where('status', 'Active')->count();
@@ -65,9 +65,9 @@ class DashboardController extends Controller
                     'id' => $place->id,
                     'name' => $place->name,
                     'category' => $place->category?->name ?? 'Attraction',
-                    'rating' => (float) ($place->rating ?? 5.0),
+                    'rating' => (float) ($place->rating ?? 0.0),
                     'reviews' => (int) ($place->reviews_count ?? 0),
-                    'visits' => (int) (($place->reviews_count ?? 1) * 35 + 120),
+                    'visits' => (int) ($place->visitors_count ?? 0),
                     'address' => $place->address,
                     'image' => $place->image_url ?? $place->image ?? '',
                     'status' => $place->status ?? 'Active',
@@ -149,24 +149,22 @@ class DashboardController extends Controller
         usort($recentActivity, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
         $recentActivity = array_slice($recentActivity, 0, 6);
 
-        // Monthly user growth data
+        // Monthly user growth data from database
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $userGrowth = [];
-        $currentMonth = (int) date('n');
 
         foreach ($months as $idx => $mName) {
             $monthNum = $idx + 1;
-            $userCount = User::whereMonth('created_at', $monthNum)->count();
-            // Baseline representation with realistic active volume
-            $usersRegistered = $monthNum <= $currentMonth ? max($userCount, ($monthNum * 12 + 15)) : 0;
-            $visitsSimulated = $monthNum <= $currentMonth ? ($usersRegistered * 45 + 180) : 0;
+            $userCount = User::whereYear('created_at', 2026)->whereMonth('created_at', $monthNum)->count();
+            $activityCount = Favorite::whereYear(DB::raw('COALESCE(saved_date, created_at)'), 2026)->whereMonth(DB::raw('COALESCE(saved_date, created_at)'), $monthNum)->count()
+                + Review::whereYear('created_at', 2026)->whereMonth('created_at', $monthNum)->count();
 
             $userGrowth[] = [
                 'month' => $mName,
-                'unitsSold' => $usersRegistered,
-                'totalTransaction' => $visitsSimulated,
-                'users' => $usersRegistered,
-                'visits' => $visitsSimulated,
+                'unitsSold' => $userCount,
+                'totalTransaction' => $activityCount,
+                'users' => $userCount,
+                'visits' => $activityCount,
             ];
         }
 

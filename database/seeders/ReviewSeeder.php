@@ -434,7 +434,32 @@ class ReviewSeeder extends Seeder
             ],
         ];
 
-        foreach ($reviews as $rev) {
+        $createdDates = [
+            '2026-01-15 09:30:00',
+            '2026-01-22 14:15:00',
+            '2026-02-10 11:20:00',
+            '2026-02-28 16:45:00',
+            '2026-03-05 10:10:00',
+            '2026-03-18 13:00:00',
+            '2026-04-02 08:40:00',
+            '2026-04-14 17:30:00',
+            '2026-05-01 12:00:00',
+            '2026-05-20 15:25:00',
+            '2026-06-08 09:15:00',
+            '2026-06-25 18:00:00',
+            '2026-07-04 11:50:00',
+            '2026-07-19 14:10:00',
+            '2026-08-03 10:30:00',
+            '2026-08-16 16:20:00',
+            '2026-08-28 13:45:00',
+            '2026-09-02 09:00:00',
+            '2026-09-12 11:15:00',
+            '2026-09-20 15:00:00',
+            '2026-09-25 17:40:00',
+            '2026-09-29 10:05:00',
+        ];
+
+        foreach ($reviews as $idx => $rev) {
             $images = $rev['images'] ?? [];
             $reply  = $rev['reply'] ?? null;
             unset($rev['images'], $rev['reply']);
@@ -443,6 +468,10 @@ class ReviewSeeder extends Seeder
             if (!$rev['place_id'] && !$rev['business_id']) {
                 continue;
             }
+
+            $dateTimestamp = $createdDates[$idx % count($createdDates)];
+            $rev['created_at'] = $dateTimestamp;
+            $rev['updated_at'] = $dateTimestamp;
 
             $searchCriteria = [
                 'user_id' => $rev['user_id'],

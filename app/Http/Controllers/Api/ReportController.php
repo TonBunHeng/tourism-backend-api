@@ -71,10 +71,8 @@ class ReportController extends Controller
             $mediaM = GalleryMedia::whereYear('created_at', $targetYear)->whereMonth('created_at', $monthNum)->count();
 
             $realMonthCount = $placesM + $eventsM + $usersM + $reviewsM + $mediaM;
-            // Provide realistic cumulative curve up to current month if seeded recently
-            $simulatedBaseline = ($monthNum <= $currentMonth) ? ($monthNum * 24 + $totalIngested * 3) : 0;
-            $ingestedVal = max($realMonthCount, $simulatedBaseline);
-            $exportVal = max(1, round($ingestedVal * 0.16));
+            $ingestedVal = $realMonthCount;
+            $exportVal = (int) round($ingestedVal * 0.15);
 
             $monthlyData[] = [
                 'month' => $mName,
@@ -117,10 +115,13 @@ class ReportController extends Controller
         });
 
         // Reviews Star Distribution
+        $rev5 = Review::where('rating', '>=', 4.5)->count();
+        $rev4 = Review::whereBetween('rating', [3.5, 4.49])->count();
+        $rev3 = Review::where('rating', '<', 3.5)->count();
         $reviewStars = [
-            ['name' => '5-Star Ratings', 'count' => Review::where('rating', '>=', 4.5)->count(), 'percentage' => 60, 'color' => 'bg-emerald-500'],
-            ['name' => '4-Star Ratings', 'count' => Review::whereBetween('rating', [3.5, 4.4])->count(), 'percentage' => 25, 'color' => 'bg-blue-500'],
-            ['name' => '3-Star & Below', 'count' => Review::where('rating', '<', 3.5)->count(), 'percentage' => 15, 'color' => 'bg-amber-500'],
+            ['name' => '5-Star Ratings', 'count' => $rev5, 'percentage' => $reviewsCount > 0 ? round(($rev5 / $reviewsCount) * 100) : 0, 'color' => 'bg-emerald-500'],
+            ['name' => '4-Star Ratings', 'count' => $rev4, 'percentage' => $reviewsCount > 0 ? round(($rev4 / $reviewsCount) * 100) : 0, 'color' => 'bg-blue-500'],
+            ['name' => '3-Star & Below', 'count' => $rev3, 'percentage' => $reviewsCount > 0 ? round(($rev3 / $reviewsCount) * 100) : 0, 'color' => 'bg-amber-500'],
         ];
 
         // Status Breakdown

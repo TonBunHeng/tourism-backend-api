@@ -86,6 +86,8 @@ class FavoriteSeeder extends Seeder
                     [
                         'visited' => $fav['visited'],
                         'saved_date' => $fav['saved_date'],
+                        'created_at' => $fav['saved_date'] . ' 10:00:00',
+                        'updated_at' => $fav['saved_date'] . ' 10:00:00',
                     ]
                 );
             }

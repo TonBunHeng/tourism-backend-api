@@ -123,6 +123,13 @@ class ReviewController extends Controller
         $ratingScopeTotal = (clone $ratingScopeQuery)->count();
 
         $ratingDistribution = [];
+        $starColors = [
+            5 => '#10b981',
+            4 => '#3b82f6',
+            3 => '#f59e0b',
+            2 => '#f97316',
+            1 => '#ef4444',
+        ];
         foreach ([5, 4, 3, 2, 1] as $star) {
             $starCount = (clone $ratingScopeQuery)->where('rating', $star)->count();
             $ratingDistribution[] = [
@@ -132,7 +139,7 @@ class ReviewController extends Controller
                 'total' => $starCount,
                 'percentage' => $ratingScopeTotal > 0 ? round(($starCount / $ratingScopeTotal) * 100) : 0,
                 'name' => "{$star} Stars",
-                'fillColor' => '#f59e0b',
+                'fillColor' => $starColors[$star],
             ];
         }
 
@@ -177,6 +184,8 @@ class ReviewController extends Controller
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $monthlyData = [];
         $runningTotal = 0;
+        $runningRatingSum = 0;
+        $runningRatingCount = 0;
 
         $monthBaseQuery = Review::query();
         if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
@@ -206,22 +215,34 @@ class ReviewController extends Controller
             }
 
             $realCount = $mQuery->count();
-            $realAvg = $realCount > 0 ? round((float) $mQuery->avg('rating'), 2) : 0.0;
+            $monthSum = $realCount > 0 ? (float) $mQuery->sum('rating') : 0.0;
+            $monthAvg = $realCount > 0 ? round((float) $mQuery->avg('rating'), 2) : null;
+
+            if ($realCount > 0) {
+                $runningRatingSum += $monthSum;
+                $runningRatingCount += $realCount;
+            }
             $runningTotal += $realCount;
+
+            // Score trajectory represents prevailing average rating
+            $trajectoryScore = $runningRatingCount > 0 
+                ? round($runningRatingSum / $runningRatingCount, 2) 
+                : ($totalReviews > 0 ? $avgRating : 5.0);
 
             $monthlyData[] = [
                 'month' => $mName,
                 'ratingsCount' => $realCount,
                 'totalRatings' => $realCount,
                 'count' => $realCount,
-                'avgRating' => $realAvg,
-                'avg_rating' => $realAvg,
+                'avgRating' => $trajectoryScore,
+                'avg_rating' => $trajectoryScore,
+                'monthAvg' => $monthAvg,
                 'cumulative' => $runningTotal,
             ];
         }
 
         // Recent reviews matching active filters
-        $recentReviews = (clone $baseQuery)->orderBy('id', 'desc')->take(20)->get();
+        $recentReviews = (clone $baseQuery)->orderBy('id', 'desc')->take(50)->get();
 
         return $this->successResponse([
             'overview' => [
