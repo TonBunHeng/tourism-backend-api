@@ -113,9 +113,14 @@ class FavoriteController extends Controller
         $timeframe = $request->query('timeframe', (string) date('Y'));
         $targetYear = is_numeric($timeframe) ? (int) $timeframe : (int) date('Y');
         $selectedCategory = $request->query('category', 'ALL');
-        $selectedStatus = $request->query('status', 'ALL');
+        $statusInput = $request->query('visit_status', $request->query('status', 'ALL'));
+        $statusUpper = strtoupper((string) $statusInput);
 
         $query = Favorite::with(['place.category', 'place.province', 'user']);
+
+        if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+            $query->whereYear('created_at', $targetYear);
+        }
 
         if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
             $query->whereHas('place.category', function ($q) use ($selectedCategory) {
@@ -127,13 +132,13 @@ class FavoriteController extends Controller
             });
         }
 
-        if ($selectedStatus === 'Visited') {
+        if ($statusUpper === 'VISITED') {
             $query->where('visited', true);
-        } elseif ($selectedStatus === 'Wishlist' || $selectedStatus === 'Planned') {
+        } elseif ($statusUpper === 'PLANNED' || $statusUpper === 'WISHLIST' || $statusUpper === 'TO VISIT' || $statusUpper === 'TO_VISIT') {
             $query->where('visited', false);
         }
 
-        $allFavorites = $query->get();
+        $allFavorites = $query->orderBy('id', 'desc')->get();
         $totalFavorites = $allFavorites->count();
         $visitedCount = $allFavorites->where('visited', true)->count();
         $wishlistCount = $totalFavorites - $visitedCount;
@@ -146,24 +151,40 @@ class FavoriteController extends Controller
             return $fav->place ? (float) $fav->place->rating : null;
         })->filter();
 
-        $avgRating = $placesWithRating->count() > 0 ? round($placesWithRating->avg(), 2) : 4.85;
+        $avgRating = $placesWithRating->count() > 0 ? round((float) $placesWithRating->avg(), 2) : 0.0;
 
         // Categories breakdown
-        $colors = ['bg-rose-500', 'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-cyan-500', 'bg-indigo-500'];
+        $colors = ['bg-[#003E83]', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-cyan-500', 'bg-indigo-500'];
+        $fillColors = ['#003E83', '#f43f5e', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#6366f1'];
         $categories = Category::all();
-        $categoryData = [];
 
+        $catScopeQuery = Favorite::query();
+        if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+            $catScopeQuery->whereYear('created_at', $targetYear);
+        }
+        if ($statusUpper === 'VISITED') {
+            $catScopeQuery->where('visited', true);
+        } elseif ($statusUpper === 'PLANNED' || $statusUpper === 'WISHLIST' || $statusUpper === 'TO VISIT' || $statusUpper === 'TO_VISIT') {
+            $catScopeQuery->where('visited', false);
+        }
+        $catScopeTotal = (clone $catScopeQuery)->count();
+
+        $categoryData = [];
         foreach ($categories as $i => $cat) {
             $catPlaceIds = Place::where('category_id', $cat->id)->pluck('id');
-            $catFavCount = $allFavorites->whereIn('place_id', $catPlaceIds)->count();
-            $categoryData[] = [
-                'id' => $cat->id,
-                'name' => $cat->name,
-                'count' => $catFavCount,
-                'percentage' => $totalFavorites > 0 ? round(($catFavCount / $totalFavorites) * 100) : 0,
-                'color' => $colors[$i % count($colors)],
-            ];
+            $catFavCount = (clone $catScopeQuery)->whereIn('place_id', $catPlaceIds)->count();
+            if ($catFavCount > 0 || $catScopeTotal === 0) {
+                $categoryData[] = [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'count' => $catFavCount,
+                    'percentage' => $catScopeTotal > 0 ? round(($catFavCount / $catScopeTotal) * 100) : 0,
+                    'color' => $colors[$i % count($colors)],
+                    'fillColor' => $fillColors[$i % count($fillColors)],
+                ];
+            }
         }
+        usort($categoryData, fn($a, $b) => $b['count'] <=> $a['count']);
 
         // Status breakdown
         $statusBreakdown = [
@@ -196,6 +217,7 @@ class FavoriteController extends Controller
                     'id' => $place->id,
                     'name' => $place->name,
                     'image_url' => $place->image_url,
+                    'image' => $place->image_url,
                     'category' => $place->category ? $place->category->name : 'Destination',
                     'province' => $place->province ? $place->province->name : 'Cambodia',
                     'rating' => (float) $place->rating,
@@ -209,30 +231,58 @@ class FavoriteController extends Controller
         // Monthly trends
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $monthlyData = [];
-        $currentMonth = (int) date('n');
+        $runningCumulative = 0;
+
+        $monthBaseQuery = Favorite::query();
+        if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
+            $monthBaseQuery->whereHas('place.category', function ($q) use ($selectedCategory) {
+                if (is_numeric($selectedCategory)) {
+                    $q->where('id', $selectedCategory);
+                } else {
+                    $q->where('name', $selectedCategory);
+                }
+            });
+        }
+        if ($statusUpper === 'VISITED') {
+            $monthBaseQuery->where('visited', true);
+        } elseif ($statusUpper === 'PLANNED' || $statusUpper === 'WISHLIST' || $statusUpper === 'TO VISIT' || $statusUpper === 'TO_VISIT') {
+            $monthBaseQuery->where('visited', false);
+        }
 
         foreach ($months as $idx => $mName) {
             $mNum = $idx + 1;
-            $realCount = Favorite::whereYear('created_at', $targetYear)->whereMonth('created_at', $mNum)->count();
-            $realVisited = Favorite::whereYear('created_at', $targetYear)->whereMonth('created_at', $mNum)->where('visited', true)->count();
+            $mQuery = (clone $monthBaseQuery)->whereMonth('created_at', $mNum);
+            if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+                $mQuery->whereYear('created_at', $targetYear);
+            }
 
-            // Provide realistic trends baseline
-            $baselineCount = ($mNum <= $currentMonth) ? max($realCount, round($mNum * 12 + $totalFavorites * 2)) : 0;
-            $baselineVisited = ($mNum <= $currentMonth) ? max($realVisited, round($baselineCount * 0.35)) : 0;
+            $realCount = $mQuery->count();
+            $realVisited = (clone $mQuery)->where('visited', true)->count();
+            $runningCumulative += $realCount;
 
             $monthlyData[] = [
                 'month' => $mName,
-                'totalFavorites' => $baselineCount,
-                'visitedCount' => $baselineVisited,
+                'newSaves' => $realCount,
+                'count' => $realCount,
+                'saves' => $realCount,
+                'totalFavorites' => $realCount,
+                'visitedCount' => $realVisited,
+                'cumulative' => $runningCumulative,
+                'total' => $runningCumulative,
             ];
         }
+
+        $recentFavorites = $allFavorites->take(20);
 
         return $this->successResponse([
             'overview' => [
                 'total_favorites' => $totalFavorites,
+                'total' => $totalFavorites,
                 'visited_count' => $visitedCount,
                 'wishlist_count' => $wishlistCount,
+                'planned_count' => $wishlistCount,
                 'conversion_rate' => $conversionRate,
+                'visited_pct' => $conversionRate,
                 'unique_travelers' => max($uniqueUsers, $totalFavorites > 0 ? 1 : 0),
                 'avg_rating' => $avgRating,
             ],
@@ -240,6 +290,9 @@ class FavoriteController extends Controller
             'category_distribution' => $categoryData,
             'status_breakdown' => $statusBreakdown,
             'top_favorites' => $topFavorites,
+            'categories' => Category::pluck('name')->toArray(),
+            'favorites' => FavoriteResource::collection($recentFavorites),
+            'recent_favorites' => FavoriteResource::collection($recentFavorites),
         ], 'Favorite places analytics retrieved successfully.');
     }
 }

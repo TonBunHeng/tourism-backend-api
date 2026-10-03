@@ -23,7 +23,7 @@ class ReviewController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Review::with(['user', 'place', 'images', 'replies.user']);
+        $query = Review::with(['user', 'place.category', 'images', 'replies.user']);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -62,78 +62,185 @@ class ReviewController extends Controller
     public function analytics(Request $request): JsonResponse
     {
         $timeframe = $request->query('timeframe', '2026');
-        $targetYear = is_numeric($timeframe) ? (int)$timeframe : 2026;
+        $targetYear = is_numeric($timeframe) ? (int) $timeframe : (int) date('Y');
+        $selectedCategory = $request->query('category', 'ALL');
+        $selectedRating = $request->query('rating', 'ALL');
 
-        $totalReviews = Review::count();
-        $avgScore = Review::avg('rating');
-        $avgRating = round((float) ($avgScore ?: 5.0), 2);
+        // Base query with active filters
+        $baseQuery = Review::with(['user', 'place.category', 'images']);
 
-        $posCount = Review::where('rating', '>=', 4)->count();
-        $positiveSentimentPct = $totalReviews > 0 ? round(($posCount / $totalReviews) * 100, 1) : 98.2;
-        $verifiedCount = Review::where('status', 'Approved')->count();
-        $verificationPct = $totalReviews > 0 ? round(($verifiedCount / $totalReviews) * 100, 1) : 99.4;
+        if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+            $baseQuery->whereYear('created_at', $targetYear);
+        }
 
-        // Rating Stars breakdown
-        $fiveStars = Review::where('rating', 5)->count();
-        $fourStars = Review::where('rating', 4)->count();
-        $threeStars = Review::where('rating', 3)->count();
-        $twoStars = Review::where('rating', 2)->count();
-        $oneStar = Review::where('rating', 1)->count();
+        if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
+            $baseQuery->whereHas('place.category', function ($q) use ($selectedCategory) {
+                if (is_numeric($selectedCategory)) {
+                    $q->where('id', $selectedCategory);
+                } else {
+                    $q->where('name', $selectedCategory);
+                }
+            });
+        }
 
-        $ratingDistribution = [
-            ['stars' => 5, 'count' => $fiveStars, 'percentage' => $totalReviews > 0 ? round(($fiveStars / $totalReviews) * 100) : 75],
-            ['stars' => 4, 'count' => $fourStars, 'percentage' => $totalReviews > 0 ? round(($fourStars / $totalReviews) * 100) : 18],
-            ['stars' => 3, 'count' => $threeStars, 'percentage' => $totalReviews > 0 ? round(($threeStars / $totalReviews) * 100) : 5],
-            ['stars' => 2, 'count' => $twoStars, 'percentage' => $totalReviews > 0 ? round(($twoStars / $totalReviews) * 100) : 1],
-            ['stars' => 1, 'count' => $oneStar, 'percentage' => $totalReviews > 0 ? round(($oneStar / $totalReviews) * 100) : 1],
-        ];
+        if ($selectedRating !== 'ALL' && !empty($selectedRating)) {
+            if ($selectedRating === 'positive') {
+                $baseQuery->where('rating', '>=', 4);
+            } elseif ($selectedRating === 'critical') {
+                $baseQuery->where('rating', '<=', 3);
+            } elseif (is_numeric($selectedRating)) {
+                $baseQuery->where('rating', (int) $selectedRating);
+            }
+        }
 
-        // Categories breakdown
-        $colors = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-cyan-500'];
-        $categories = Category::all();
-        $categoryData = [];
+        $filteredReviews = (clone $baseQuery)->orderBy('id', 'desc')->get();
+        $totalReviews = $filteredReviews->count();
+        $avgScore = $totalReviews > 0 ? $filteredReviews->avg('rating') : 0.0;
+        $avgRating = round((float) $avgScore, 2);
 
-        foreach ($categories as $i => $cat) {
-            $catPlaceIds = Place::where('category_id', $cat->id)->pluck('id');
-            $catReviewCount = Review::whereIn('place_id', $catPlaceIds)->count();
-            $categoryData[] = [
-                'name' => $cat->name,
-                'count' => $catReviewCount,
-                'percentage' => $totalReviews > 0 ? round(($catReviewCount / $totalReviews) * 100) : (20 + $i * 5),
-                'color' => $colors[$i % count($colors)],
+        $posCount = $filteredReviews->where('rating', '>=', 4)->count();
+        $criticalCount = $filteredReviews->where('rating', '<=', 3)->count();
+        $positiveSentimentPct = $totalReviews > 0 ? round(($posCount / $totalReviews) * 100, 1) : 0.0;
+        $criticalSentimentPct = $totalReviews > 0 ? round(($criticalCount / $totalReviews) * 100, 1) : 0.0;
+
+        $verifiedCount = $filteredReviews->where('status', 'Approved')->count();
+        $verificationPct = $totalReviews > 0 ? round(($verifiedCount / $totalReviews) * 100, 1) : 0.0;
+
+        // Rating Stars breakdown scoped to category & timeframe
+        $ratingScopeQuery = Review::query();
+        if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+            $ratingScopeQuery->whereYear('created_at', $targetYear);
+        }
+        if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
+            $ratingScopeQuery->whereHas('place.category', function ($q) use ($selectedCategory) {
+                if (is_numeric($selectedCategory)) {
+                    $q->where('id', $selectedCategory);
+                } else {
+                    $q->where('name', $selectedCategory);
+                }
+            });
+        }
+        $ratingScopeTotal = (clone $ratingScopeQuery)->count();
+
+        $ratingDistribution = [];
+        foreach ([5, 4, 3, 2, 1] as $star) {
+            $starCount = (clone $ratingScopeQuery)->where('rating', $star)->count();
+            $ratingDistribution[] = [
+                'stars' => $star,
+                'rating' => $star,
+                'count' => $starCount,
+                'total' => $starCount,
+                'percentage' => $ratingScopeTotal > 0 ? round(($starCount / $ratingScopeTotal) * 100) : 0,
+                'name' => "{$star} Stars",
+                'fillColor' => '#f59e0b',
             ];
         }
+
+        // Categories breakdown
+        $categories = Category::all();
+        $categoryColors = ['bg-[#003E83]', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-cyan-500', 'bg-indigo-500'];
+        $categoryFillColors = ['#003E83', '#f43f5e', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#6366f1'];
+
+        $catScopeQuery = Review::query();
+        if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+            $catScopeQuery->whereYear('created_at', $targetYear);
+        }
+        if ($selectedRating !== 'ALL' && !empty($selectedRating)) {
+            if ($selectedRating === 'positive') {
+                $catScopeQuery->where('rating', '>=', 4);
+            } elseif ($selectedRating === 'critical') {
+                $catScopeQuery->where('rating', '<=', 3);
+            } elseif (is_numeric($selectedRating)) {
+                $catScopeQuery->where('rating', (int) $selectedRating);
+            }
+        }
+        $catScopeTotal = (clone $catScopeQuery)->count();
+
+        $categoryData = [];
+        foreach ($categories as $i => $cat) {
+            $catPlaceIds = Place::where('category_id', $cat->id)->pluck('id');
+            $catReviewCount = (clone $catScopeQuery)->whereIn('place_id', $catPlaceIds)->count();
+            if ($catReviewCount > 0 || $catScopeTotal === 0) {
+                $categoryData[] = [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'count' => $catReviewCount,
+                    'percentage' => $catScopeTotal > 0 ? round(($catReviewCount / $catScopeTotal) * 100) : 0,
+                    'color' => $categoryColors[$i % count($categoryColors)],
+                    'fillColor' => $categoryFillColors[$i % count($categoryFillColors)],
+                ];
+            }
+        }
+        usort($categoryData, fn($a, $b) => $b['count'] <=> $a['count']);
 
         // Monthly trends
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $monthlyData = [];
-        $currentMonth = (int) date('n');
+        $runningTotal = 0;
+
+        $monthBaseQuery = Review::query();
+        if ($selectedCategory !== 'ALL' && !empty($selectedCategory)) {
+            $monthBaseQuery->whereHas('place.category', function ($q) use ($selectedCategory) {
+                if (is_numeric($selectedCategory)) {
+                    $q->where('id', $selectedCategory);
+                } else {
+                    $q->where('name', $selectedCategory);
+                }
+            });
+        }
+        if ($selectedRating !== 'ALL' && !empty($selectedRating)) {
+            if ($selectedRating === 'positive') {
+                $monthBaseQuery->where('rating', '>=', 4);
+            } elseif ($selectedRating === 'critical') {
+                $monthBaseQuery->where('rating', '<=', 3);
+            } elseif (is_numeric($selectedRating)) {
+                $monthBaseQuery->where('rating', (int) $selectedRating);
+            }
+        }
 
         foreach ($months as $idx => $mName) {
             $mNum = $idx + 1;
-            $realCount = Review::whereYear('created_at', $targetYear)->whereMonth('created_at', $mNum)->count();
-            $realAvg = Review::whereYear('created_at', $targetYear)->whereMonth('created_at', $mNum)->avg('rating');
+            $mQuery = (clone $monthBaseQuery)->whereMonth('created_at', $mNum);
+            if ($timeframe !== 'ALL' && is_numeric($timeframe)) {
+                $mQuery->whereYear('created_at', $targetYear);
+            }
 
-            $baselineCount = ($mNum <= $currentMonth) ? max($realCount, round($mNum * 15 + $totalReviews * 4)) : 0;
-            $baselineAvg = ($mNum <= $currentMonth) ? round($realAvg ?: (4.8 + ($mNum % 3) * 0.05), 2) : 0;
+            $realCount = $mQuery->count();
+            $realAvg = $realCount > 0 ? round((float) $mQuery->avg('rating'), 2) : 0.0;
+            $runningTotal += $realCount;
 
             $monthlyData[] = [
                 'month' => $mName,
-                'totalRatings' => $baselineCount,
-                'avgRating' => $baselineAvg,
+                'ratingsCount' => $realCount,
+                'totalRatings' => $realCount,
+                'count' => $realCount,
+                'avgRating' => $realAvg,
+                'avg_rating' => $realAvg,
+                'cumulative' => $runningTotal,
             ];
         }
+
+        // Recent reviews matching active filters
+        $recentReviews = (clone $baseQuery)->orderBy('id', 'desc')->take(20)->get();
 
         return $this->successResponse([
             'overview' => [
                 'total_ratings' => $totalReviews,
+                'total' => $totalReviews,
                 'avg_rating' => $avgRating,
+                'positive_count' => $posCount,
+                'critical_count' => $criticalCount,
                 'positive_sentiment_pct' => $positiveSentimentPct,
+                'critical_sentiment_pct' => $criticalSentimentPct,
+                'verification_count' => $verifiedCount,
                 'verification_pct' => $verificationPct,
             ],
             'monthly_trends' => $monthlyData,
             'rating_distribution' => $ratingDistribution,
             'category_distribution' => $categoryData,
+            'categories' => Category::pluck('name')->toArray(),
+            'reviews' => ReviewResource::collection($recentReviews),
+            'recent_reviews' => ReviewResource::collection($recentReviews),
         ], 'Ratings analytics retrieved successfully.');
     }
 
