@@ -2,7 +2,7 @@
 -- Smart Tourism Information System - Database Schema
 -- Target Engine: MySQL 8.0+
 -- File: database.sql
--- Contains: All 44 database tables used in the project
+-- Contains: All 45 database tables used in the project
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS `tourism_db` 
@@ -15,6 +15,7 @@ USE `tourism_db`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop tables if they already exist to allow clean re-import
+DROP TABLE IF EXISTS `bookings`;
 DROP TABLE IF EXISTS `business_promotions`;
 DROP TABLE IF EXISTS `business_hours`;
 DROP TABLE IF EXISTS `business_services`;
@@ -941,4 +942,43 @@ CREATE TABLE `business_promotions` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_business_promotions_business` FOREIGN KEY (`business_id`) REFERENCES `businesses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_business_promotions_business_id` (`business_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- 45. TABLE: bookings
+-- Travel reservations placed by tourists with business listings and services
+-- ============================================================================
+CREATE TABLE `bookings` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `booking_reference` VARCHAR(32) NOT NULL UNIQUE,
+  `user_id` INT UNSIGNED NOT NULL,
+  `business_id` INT UNSIGNED NOT NULL,
+  `service_id` INT UNSIGNED NULL,
+  `customer_name` VARCHAR(150) NOT NULL,
+  `customer_email` VARCHAR(150) NOT NULL,
+  `customer_phone` VARCHAR(50) NULL,
+  `booking_date` DATE NOT NULL,
+  `booking_time` VARCHAR(20) NULL,
+  `number_of_guests` INT UNSIGNED NOT NULL DEFAULT 1,
+  `total_price` DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+  `currency` VARCHAR(10) NOT NULL DEFAULT 'USD',
+  `status` ENUM('pending', 'confirmed', 'cancelled', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
+  `payment_status` ENUM('unpaid', 'paid', 'refunded') NOT NULL DEFAULT 'unpaid',
+  `special_requests` TEXT NULL,
+  `rejection_reason` TEXT NULL,
+  `cancellation_reason` TEXT NULL,
+  `confirmed_at` TIMESTAMP NULL,
+  `cancelled_at` TIMESTAMP NULL,
+  `completed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_bookings_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_bookings_business` FOREIGN KEY (`business_id`) REFERENCES `businesses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_bookings_service` FOREIGN KEY (`service_id`) REFERENCES `business_services` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  INDEX `idx_bookings_reference` (`booking_reference`),
+  INDEX `idx_bookings_user_id` (`user_id`),
+  INDEX `idx_bookings_business_id` (`business_id`),
+  INDEX `idx_bookings_service_id` (`service_id`),
+  INDEX `idx_bookings_status` (`status`),
+  INDEX `idx_bookings_booking_date` (`booking_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
