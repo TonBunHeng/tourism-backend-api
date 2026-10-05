@@ -19,6 +19,7 @@ use App\Http\Resources\BusinessPromotionResource;
 use App\Http\Resources\BusinessResource;
 use App\Http\Resources\BusinessServiceResource;
 use App\Http\Resources\ReviewResource;
+use App\Models\Booking;
 use App\Models\Business;
 use App\Models\BusinessHour;
 use App\Models\BusinessImage;
@@ -762,7 +763,7 @@ class BusinessOwnerController extends Controller
     }
 
     /**
-     * Get statistics for own business.
+     * Get statistics for own business completely computed from the database.
      */
     public function statistics(Request $request, $id): JsonResponse
     {
@@ -779,68 +780,121 @@ class BusinessOwnerController extends Controller
 
         $totalReviews = Review::where('business_id', $business->id)->count();
         $approvedReviews = Review::where('business_id', $business->id)->where('status', 'Approved')->count();
-        $avgRating = Review::where('business_id', $business->id)->where('status', 'Approved')->avg('rating') ?: 0.0;
+        $avgRating = Review::where('business_id', $business->id)->where('status', 'Approved')->avg('rating');
+        if ($avgRating === null) {
+            $avgRating = $business->rating ? (float) $business->rating : 0.0;
+        }
+
         $totalServices = BusinessService::where('business_id', $business->id)->count();
         $activePromotions = BusinessPromotion::where('business_id', $business->id)->active()->count();
         $totalImages = BusinessImage::where('business_id', $business->id)->count();
         $totalEvents = Event::where('business_id', $business->id)->count();
 
-        // Monthly performance & traffic trends
+        // Real Bookings Statistics from Database
+        $totalBookings = Booking::where('business_id', $business->id)->count();
+        $pendingBookings = Booking::where('business_id', $business->id)->where('status', Booking::STATUS_PENDING)->count();
+        $confirmedBookings = Booking::where('business_id', $business->id)->where('status', Booking::STATUS_CONFIRMED)->count();
+        $completedBookings = Booking::where('business_id', $business->id)->where('status', Booking::STATUS_COMPLETED)->count();
+        $cancelledBookings = Booking::where('business_id', $business->id)->where('status', Booking::STATUS_CANCELLED)->count();
+        $rejectedBookings = Booking::where('business_id', $business->id)->where('status', Booking::STATUS_REJECTED)->count();
+        $totalRevenue = (float) Booking::where('business_id', $business->id)
+            ->whereIn('status', [Booking::STATUS_COMPLETED, Booking::STATUS_CONFIRMED])
+            ->sum('total_price');
+        $totalGuests = (int) Booking::where('business_id', $business->id)->sum('number_of_guests');
+
+        // Real Monthly performance from Database (Jan - Dec)
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $currentMonth = (int) date('n');
+        $currentYear = (int) date('Y');
         $monthlyGrowth = [];
 
         foreach ($months as $idx => $mName) {
             $monthNum = $idx + 1;
+
+            $monthBookings = Booking::where('business_id', $business->id)
+                ->where(function ($q) use ($currentYear, $monthNum) {
+                    $q->whereYear('booking_date', $currentYear)->whereMonth('booking_date', $monthNum)
+                      ->orWhere(function ($q2) use ($currentYear, $monthNum) {
+                          $q2->whereNull('booking_date')->whereYear('created_at', $currentYear)->whereMonth('created_at', $monthNum);
+                      });
+                })
+                ->count();
+
+            $monthRevenue = (float) Booking::where('business_id', $business->id)
+                ->where(function ($q) use ($currentYear, $monthNum) {
+                    $q->whereYear('booking_date', $currentYear)->whereMonth('booking_date', $monthNum)
+                      ->orWhere(function ($q2) use ($currentYear, $monthNum) {
+                          $q2->whereNull('booking_date')->whereYear('created_at', $currentYear)->whereMonth('created_at', $monthNum);
+                      });
+                })
+                ->whereIn('status', [Booking::STATUS_COMPLETED, Booking::STATUS_CONFIRMED])
+                ->sum('total_price');
+
+            $monthGuests = (int) Booking::where('business_id', $business->id)
+                ->where(function ($q) use ($currentYear, $monthNum) {
+                    $q->whereYear('booking_date', $currentYear)->whereMonth('booking_date', $monthNum)
+                      ->orWhere(function ($q2) use ($currentYear, $monthNum) {
+                          $q2->whereNull('booking_date')->whereYear('created_at', $currentYear)->whereMonth('created_at', $monthNum);
+                      });
+                })
+                ->sum('number_of_guests');
+
             $monthReviews = Review::where('business_id', $business->id)
+                ->whereYear('created_at', $currentYear)
                 ->whereMonth('created_at', $monthNum)
                 ->count();
 
-            if ($monthNum <= $currentMonth) {
-                $units = max($monthReviews, ($monthNum * 12 + 15));
-                $visits = ($units * 45 + 180);
-            } else {
-                $units = 0;
-                $visits = 0;
-            }
-
             $monthlyGrowth[] = [
                 'month' => $mName,
-                'unitsSold' => $units,
-                'totalTransaction' => $visits,
-                'interactions' => $units,
-                'visits' => $visits,
+                'month_num' => $monthNum,
+                'bookings' => $monthBookings,
+                'revenue' => round($monthRevenue, 2),
+                'guests' => $monthGuests,
+                'reviews' => $monthReviews,
+                // Recharts keys
+                'unitsSold' => $monthBookings,
+                'totalTransaction' => round($monthRevenue, 2),
+                'interactions' => $monthBookings + $monthReviews,
+                'visits' => $monthGuests,
             ];
         }
 
-        // Rating distribution for pie chart
+        // Real Rating distribution for pie chart from DB
         $fiveStar = Review::where('business_id', $business->id)->where('status', 'Approved')->where('rating', '>=', 4.5)->count();
         $fourStar = Review::where('business_id', $business->id)->where('status', 'Approved')->whereBetween('rating', [3.5, 4.49])->count();
         $threeStar = Review::where('business_id', $business->id)->where('status', 'Approved')->whereBetween('rating', [2.5, 3.49])->count();
         $twoStar = Review::where('business_id', $business->id)->where('status', 'Approved')->whereBetween('rating', [1.5, 2.49])->count();
         $oneStar = Review::where('business_id', $business->id)->where('status', 'Approved')->where('rating', '<', 1.5)->count();
 
-        $c5 = $approvedReviews > 0 ? $fiveStar : 12;
-        $c4 = $approvedReviews > 0 ? $fourStar : 5;
-        $c3 = $approvedReviews > 0 ? $threeStar : 2;
-        $c2 = $approvedReviews > 0 ? $twoStar : 1;
-        $c1 = $approvedReviews > 0 ? $oneStar : 0;
-        $sumC = max(1, $c5 + $c4 + $c3 + $c2 + $c1);
+        $sumReviews = $fiveStar + $fourStar + $threeStar + $twoStar + $oneStar;
 
         $ratingDistribution = [
-            ['name' => '5 Stars (Excellent)', 'value' => $c5, 'percentage' => round(($c5 / $sumC) * 100), 'color' => '#10B981'],
-            ['name' => '4 Stars (Very Good)', 'value' => $c4, 'percentage' => round(($c4 / $sumC) * 100), 'color' => '#3B82F6'],
-            ['name' => '3 Stars (Average)', 'value' => $c3, 'percentage' => round(($c3 / $sumC) * 100), 'color' => '#F59E0B'],
-            ['name' => '2 Stars (Poor)', 'value' => $c2, 'percentage' => round(($c2 / $sumC) * 100), 'color' => '#F97316'],
-            ['name' => '1 Star (Needs Work)', 'value' => $c1, 'percentage' => round(($c1 / $sumC) * 100), 'color' => '#EF4444'],
+            ['name' => '5 Stars (Excellent)', 'value' => $fiveStar, 'percentage' => $sumReviews > 0 ? round(($fiveStar / $sumReviews) * 100) : 0, 'color' => '#10B981'],
+            ['name' => '4 Stars (Very Good)', 'value' => $fourStar, 'percentage' => $sumReviews > 0 ? round(($fourStar / $sumReviews) * 100) : 0, 'color' => '#3B82F6'],
+            ['name' => '3 Stars (Average)', 'value' => $threeStar, 'percentage' => $sumReviews > 0 ? round(($threeStar / $sumReviews) * 100) : 0, 'color' => '#F59E0B'],
+            ['name' => '2 Stars (Poor)', 'value' => $twoStar, 'percentage' => $sumReviews > 0 ? round(($twoStar / $sumReviews) * 100) : 0, 'color' => '#F97316'],
+            ['name' => '1 Star (Needs Work)', 'value' => $oneStar, 'percentage' => $sumReviews > 0 ? round(($oneStar / $sumReviews) * 100) : 0, 'color' => '#EF4444'],
         ];
 
-        $trafficSources = [
-            ['name' => 'Search & Explore', 'value' => 45, 'percentage' => 45, 'color' => '#4472C4'],
-            ['name' => 'Category Directory', 'value' => 25, 'percentage' => 25, 'color' => '#ED7D31'],
-            ['name' => 'Direct Profile Visits', 'value' => 18, 'percentage' => 18, 'color' => '#10B981'],
-            ['name' => 'Promotions & Deals', 'value' => 12, 'percentage' => 12, 'color' => '#8B5CF6'],
+        // Real Booking Status distribution from DB
+        $bookingDistribution = [
+            ['name' => 'Completed', 'value' => $completedBookings, 'percentage' => $totalBookings > 0 ? round(($completedBookings / $totalBookings) * 100) : 0, 'color' => '#10B981'],
+            ['name' => 'Confirmed', 'value' => $confirmedBookings, 'percentage' => $totalBookings > 0 ? round(($confirmedBookings / $totalBookings) * 100) : 0, 'color' => '#3B82F6'],
+            ['name' => 'Pending Action', 'value' => $pendingBookings, 'percentage' => $totalBookings > 0 ? round(($pendingBookings / $totalBookings) * 100) : 0, 'color' => '#F59E0B'],
+            ['name' => 'Cancelled', 'value' => $cancelledBookings, 'percentage' => $totalBookings > 0 ? round(($cancelledBookings / $totalBookings) * 100) : 0, 'color' => '#9CA3AF'],
+            ['name' => 'Declined', 'value' => $rejectedBookings, 'percentage' => $totalBookings > 0 ? round(($rejectedBookings / $totalBookings) * 100) : 0, 'color' => '#EF4444'],
         ];
+
+        // Real Service booking breakdown
+        $services = BusinessService::where('business_id', $business->id)->get();
+        $serviceDistribution = [];
+        foreach ($services as $srv) {
+            $cnt = Booking::where('business_id', $business->id)->where('service_id', $srv->id)->count();
+            $serviceDistribution[] = [
+                'name' => $srv->name,
+                'value' => $cnt,
+                'percentage' => $totalBookings > 0 ? round(($cnt / $totalBookings) * 100) : 0,
+            ];
+        }
 
         return $this->successResponse([
             'business_id' => $business->id,
@@ -854,11 +908,22 @@ class BusinessOwnerController extends Controller
             'active_promotions' => $activePromotions,
             'total_images' => $totalImages,
             'total_events' => $totalEvents,
+            'total_bookings' => $totalBookings,
+            'pending_bookings' => $pendingBookings,
+            'confirmed_bookings' => $confirmedBookings,
+            'completed_bookings' => $completedBookings,
+            'cancelled_bookings' => $cancelledBookings,
+            'rejected_bookings' => $rejectedBookings,
+            'total_revenue' => round($totalRevenue, 2),
+            'total_guests' => $totalGuests,
+            'currency' => 'USD',
             'growth_data' => $monthlyGrowth,
             'monthly_growth' => $monthlyGrowth,
             'monthly_trends' => $monthlyGrowth,
             'rating_distribution' => $ratingDistribution,
-            'traffic_sources' => $trafficSources,
+            'booking_distribution' => $bookingDistribution,
+            'traffic_sources' => $bookingDistribution, // backwards compatible key
+            'service_distribution' => $serviceDistribution,
         ], 'Business statistics retrieved successfully.');
     }
 

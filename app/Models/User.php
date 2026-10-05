@@ -100,6 +100,11 @@ class User extends Authenticatable
         return $this->hasMany(Business::class, 'owner_id');
     }
 
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'user_id');
+    }
+
     public function trips()
     {
         return $this->hasMany(Trip::class, 'user_id');

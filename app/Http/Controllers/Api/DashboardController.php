@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Business;
 use App\Models\Category;
 use App\Models\Event;
@@ -40,6 +41,9 @@ class DashboardController extends Controller
         $pendingReviews = Review::where('status', 'Pending')->count();
         $totalFavorites = Favorite::count();
         $totalGalleries = GalleryMedia::count();
+        $totalBookings = Booking::count();
+        $pendingBookings = Booking::where('status', 'pending')->count();
+        $confirmedBookings = Booking::where('status', 'confirmed')->count();
 
         $pendingVerifications = $pendingBusinesses + $pendingPlaces + $pendingReviews;
 
@@ -224,6 +228,9 @@ class DashboardController extends Controller
                 'pending_reviews' => $pendingReviews,
                 'total_favorites' => $totalFavorites,
                 'total_galleries' => $totalGalleries,
+                'total_bookings' => $totalBookings,
+                'pending_bookings' => $pendingBookings,
+                'confirmed_bookings' => $confirmedBookings,
                 'avg_rating' => round((float)$averageRating, 1),
                 'average_rating' => round((float)$averageRating, 1),
                 'active_users' => $activeUsers,

@@ -144,5 +144,10 @@ class DatabaseSeeder extends Seeder
         // 11. Notifications Center
         // ----------------------------------------------------------------------
         $this->call(NotificationSeeder::class);
+
+        // ----------------------------------------------------------------------
+        // 12. Bookings & Reservations
+        // ----------------------------------------------------------------------
+        $this->call(BookingSeeder::class);
     }
 }

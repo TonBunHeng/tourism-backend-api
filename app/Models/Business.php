@@ -122,6 +122,11 @@ class Business extends Model
         return $this->hasMany(Review::class, 'business_id');
     }
 
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'business_id');
+    }
+
     public function scopeApproved($query)
     {
         return $query->where('verification_status', 'approved');

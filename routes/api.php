@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminBookingController;
 use App\Http\Controllers\Api\Admin\AdminBusinessController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Business\BusinessBookingController;
 use App\Http\Controllers\Api\Business\BusinessOwnerController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
@@ -22,6 +24,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\Travel\TravelAchievementController;
 use App\Http\Controllers\Api\Travel\TravelAiChatController;
 use App\Http\Controllers\Api\Travel\TravelAuthController;
+use App\Http\Controllers\Api\Travel\TravelBookingController;
 use App\Http\Controllers\Api\Travel\TravelBusinessController;
 use App\Http\Controllers\Api\Travel\TravelCategoryController;
 use App\Http\Controllers\Api\Travel\TravelDeletionRequestController;
@@ -202,6 +205,14 @@ Route::prefix('travel')->group(function () {
         Route::delete('/trips/{id}/itineraries/{itineraryId}', [TravelTripController::class, 'deleteItinerary']);
         Route::post('/trips/{id}/reorder', [TravelTripController::class, 'reorderItineraries']);
 
+        // Tourist Bookings with Businesses
+        Route::get('/bookings', [TravelBookingController::class, 'index']);
+        Route::post('/bookings', [TravelBookingController::class, 'store']);
+        Route::post('/businesses/{id}/bookings', [TravelBookingController::class, 'store']);
+        Route::get('/bookings/{id}', [TravelBookingController::class, 'show']);
+        Route::post('/bookings/{id}/cancel', [TravelBookingController::class, 'cancel']);
+        Route::put('/bookings/{id}/cancel', [TravelBookingController::class, 'cancel']);
+
         // Tourist AI Chat History
         Route::get('/ai/conversations', [TravelAiChatController::class, 'conversations']);
         Route::get('/ai/conversations/{sessionId}/messages', [TravelAiChatController::class, 'getMessages']);
@@ -272,6 +283,20 @@ Route::prefix('business')->middleware(['auth:sanctum', 'role:business_owner,admi
     Route::get('/businesses/{id}/statistics', [BusinessOwnerController::class, 'statistics']);
     Route::get('/businesses/{id}/events', [BusinessOwnerController::class, 'events']);
     Route::post('/businesses/{id}/events', [BusinessOwnerController::class, 'storeEvent']);
+
+    // Bookings Management
+    Route::get('/bookings', [BusinessBookingController::class, 'index']);
+    Route::get('/bookings/statistics', [BusinessBookingController::class, 'statistics']);
+    Route::get('/businesses/{id}/bookings', [BusinessBookingController::class, 'businessBookings']);
+    Route::get('/bookings/{id}', [BusinessBookingController::class, 'show']);
+    Route::post('/bookings/{id}/confirm', [BusinessBookingController::class, 'confirm']);
+    Route::put('/bookings/{id}/confirm', [BusinessBookingController::class, 'confirm']);
+    Route::post('/bookings/{id}/reject', [BusinessBookingController::class, 'reject']);
+    Route::put('/bookings/{id}/reject', [BusinessBookingController::class, 'reject']);
+    Route::post('/bookings/{id}/complete', [BusinessBookingController::class, 'complete']);
+    Route::put('/bookings/{id}/complete', [BusinessBookingController::class, 'complete']);
+    Route::patch('/bookings/{id}/status', [BusinessBookingController::class, 'updateStatus']);
+    Route::put('/bookings/{id}/status', [BusinessBookingController::class, 'updateStatus']);
 });
 
 /*
@@ -366,7 +391,21 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/businesses/{id}/reject', [AdminBusinessController::class, 'reject']);
             Route::post('/businesses/{id}/suspend', [AdminBusinessController::class, 'suspend']);
             Route::post('/businesses/{id}/activate', [AdminBusinessController::class, 'activate']);
+
+            // Bookings
+            Route::get('/bookings', [AdminBookingController::class, 'index']);
+            Route::get('/bookings/{id}', [AdminBookingController::class, 'show']);
+            Route::put('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+            Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+            Route::delete('/bookings/{id}', [AdminBookingController::class, 'destroy']);
         });
+
+        // Bookings Management
+        Route::get('/bookings', [AdminBookingController::class, 'index']);
+        Route::get('/bookings/{id}', [AdminBookingController::class, 'show']);
+        Route::put('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+        Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+        Route::delete('/bookings/{id}', [AdminBookingController::class, 'destroy']);
 
         // Places Management
         Route::get('/places', [PlaceController::class, 'index']);
