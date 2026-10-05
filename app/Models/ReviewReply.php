@@ -15,7 +15,18 @@ class ReviewReply extends Model
         'review_id',
         'user_id',
         'comment',
+        'reply',
     ];
+
+    public function setReplyAttribute($value): void
+    {
+        $this->attributes['comment'] = $value;
+    }
+
+    public function getReplyAttribute(): ?string
+    {
+        return $this->attributes['comment'] ?? null;
+    }
 
     protected function casts(): array
     {

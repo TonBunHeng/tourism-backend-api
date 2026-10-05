@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\AdminBusinessController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Business\BusinessBookingController;
 use App\Http\Controllers\Api\Business\BusinessOwnerController;
+use App\Http\Controllers\Api\Business\BusinessReportController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeletionRequestController;
@@ -297,6 +298,12 @@ Route::prefix('business')->middleware(['auth:sanctum', 'role:business_owner,admi
     Route::put('/bookings/{id}/complete', [BusinessBookingController::class, 'complete']);
     Route::patch('/bookings/{id}/status', [BusinessBookingController::class, 'updateStatus']);
     Route::put('/bookings/{id}/status', [BusinessBookingController::class, 'updateStatus']);
+
+    // Reports & Export Analytics
+    Route::get('/reports', [BusinessReportController::class, 'index']);
+    Route::get('/reports/export', [BusinessReportController::class, 'export']);
+    Route::get('/businesses/{id}/reports', [BusinessReportController::class, 'businessReport']);
+    Route::get('/businesses/{id}/reports/export', [BusinessReportController::class, 'exportBusiness']);
 });
 
 /*

@@ -584,8 +584,35 @@ The system provides a complete **Pending Review -> Approved & Active** request m
 | **Super Admin** (`super_admin`) | **Full System Authority**: Complete CRUD over all Business Profiles, Places, Events, Media, Reviews, Users, System Settings, Deletion Requests approval/erasure & IP Blocking | `tourism-admin` (Admin Panel) | **Full Global Access** (Any Profile) |
 | **Admin** (`admin`) | **Full Administrative Access**: Manage Business Profiles, Places, Events, Media, Reviews & Users (Deletion Requests restricted to Super Admin) | `tourism-admin` (Admin Panel) | **Full Global Access** (Any Profile) |
 | **Tourism Content Editor** (`guide_editor`) | **Content Management**: Full CRUD over Places, Events, Media Galleries, Categories & Provinces | `tourism-admin` (Admin Panel) | **Content Editor Scope** |
-| **Business Owner** (`business_owner`) | **Business Owner Dashboard**: Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies) | `tourism-travel` (`/business/dashboard`) | **Owned Profiles Only** |
+| **Business Owner** (`business_owner`) | **Business Owner Dashboard**: Full CRUD over owned Business Profiles (Images, Services, Hours, Promotions, Events & Review Replies), Bookings Management & Financial Reports Export | `tourism-travel` (`/business/dashboard`) | **Owned Profiles Only** |
 | **Tourist / User** (`user`) | **Public Explorer**: View destinations, search businesses, save favorites, write reviews, plan trips, AI assistant | `tourism-travel` | **Read-Only / User Content** |
+
+---
+
+## Business Owner Bookings, Reports & Financial Analytics API
+
+Business Owners can manage customer reservations and generate detailed performance reports for their businesses via the following protected endpoints (`role: business_owner, admin, super_admin`):
+
+### 1. Bookings Management (`/api/business/bookings`)
+* `GET /api/business/bookings`: List bookings for owned businesses with filters (`business_id`, `status`, `payment_status`, `date_from`, `date_to`, `search`, `sort`).
+* `GET /api/business/bookings/statistics`: Summary statistics across all owned bookings (counts, pending, confirmed, completed, cancelled, upcoming, total revenue).
+* `GET /api/business/businesses/{id}/bookings`: Bookings for a specific owned business.
+* `GET /api/business/bookings/{id}`: Booking details with customer contact information and requested service.
+* `POST /api/business/bookings/{id}/confirm`: Confirm reservation and trigger traveler push/in-app notification.
+* `POST /api/business/bookings/{id}/reject`: Decline reservation with recorded rejection reason.
+* `POST /api/business/bookings/{id}/complete`: Conclude reservation, mark payment paid, and trigger review invitation.
+
+### 2. Business Performance Reports & Analytics (`/api/business/reports`)
+* `GET /api/business/reports`: Comprehensive business performance report including:
+  * **Summary**: Total gross revenue, completed revenue, pipeline pending revenue, total bookings, guests served, average booking value, average party size, cancellation rate, and completion rate.
+  * **Time-Series Trends**: Daily or monthly breakdown (bookings count, revenue, visitors, completed vs cancelled) supporting timeframes (`today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`, `this_year`, `last_year`, `all_time`) or custom `date_from`/`date_to`.
+  * **Top Services**: Ranking of services by bookings, revenue, and revenue share percentage.
+  * **Customer Insights**: Unique customers count, repeat customer count, repeat rate, and top customer leaderboard.
+  * **Ratings & Quality**: Star rating breakdown (1-5 stars), approved reviews count, and owner reply response rate.
+  * **Payment Breakdown**: Paid, unpaid, and refunded volumes.
+* `GET /api/business/businesses/{id}/reports`: Performance report filtered to a specific business.
+* `GET /api/business/reports/export`: Export bookings and revenue data as downloadable UTF-8 CSV spreadsheet (`format=csv`) or JSON (`format=json`).
+* `GET /api/business/businesses/{id}/reports/export`: Export statement for a specific owned business.
 
 ---
 
