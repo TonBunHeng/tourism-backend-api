@@ -41,16 +41,28 @@ class SystemSettingController extends Controller
         $validated = $request->validate([
             'settings' => 'required|array',
             'settings.*.key' => 'required|string|max:100',
-            'settings.*.value' => 'nullable|string',
+            'settings.*.value' => 'nullable',
             'settings.*.group' => 'nullable|string|max:50',
             'settings.*.description' => 'nullable|string|max:255',
         ]);
 
         foreach ($validated['settings'] as $item) {
+            $rawVal = $item['value'] ?? null;
+            $valStr = null;
+            if ($rawVal !== null) {
+                if (is_bool($rawVal)) {
+                    $valStr = $rawVal ? 'true' : 'false';
+                } elseif (is_array($rawVal)) {
+                    $valStr = json_encode($rawVal);
+                } else {
+                    $valStr = (string)$rawVal;
+                }
+            }
+
             SystemSetting::updateOrCreate(
                 ['setting_key' => $item['key']],
                 [
-                    'setting_value' => $item['value'] ?? null,
+                    'setting_value' => $valStr,
                     'setting_group' => $item['group'] ?? 'general',
                     'description' => $item['description'] ?? null,
                 ]

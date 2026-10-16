@@ -113,32 +113,9 @@ class DatabaseSeeder extends Seeder
         }
 
         // ----------------------------------------------------------------------
-        // 10. System Settings
+        // 10. Comprehensive System Settings
         // ----------------------------------------------------------------------
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'site_title'],
-            ['setting_value' => 'AngkorVerses Tourism Information System', 'setting_group' => 'general', 'description' => 'Main portal header title']
-        );
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'contact_email'],
-            ['setting_value' => 'info@tourism.gov.kh', 'setting_group' => 'contact', 'description' => 'Official national support contact address']
-        );
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'contact_phone'],
-            ['setting_value' => '+855 23 888 777', 'setting_group' => 'contact', 'description' => 'Official tourism hotline hotline']
-        );
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'enable_user_reviews'],
-            ['setting_value' => 'true', 'setting_group' => 'features', 'description' => 'Allow tourist user review submissions']
-        );
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'enable_ai_travel_assistant'],
-            ['setting_value' => 'true', 'setting_group' => 'features', 'description' => 'Enable Gemini-powered AI tourist chat assistant']
-        );
-        SystemSetting::updateOrCreate(
-            ['setting_key' => 'maintenance_mode'],
-            ['setting_value' => 'false', 'setting_group' => 'system', 'description' => 'Global maintenance toggle']
-        );
+        $this->call(SystemSettingSeeder::class);
 
         // ----------------------------------------------------------------------
         // 11. Notifications Center
