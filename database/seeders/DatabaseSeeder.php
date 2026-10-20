@@ -126,5 +126,10 @@ class DatabaseSeeder extends Seeder
         // 12. Bookings & Reservations
         // ----------------------------------------------------------------------
         $this->call(BookingSeeder::class);
+
+        // ----------------------------------------------------------------------
+        // 13. Curated Tour Packages
+        // ----------------------------------------------------------------------
+        $this->call(TourSeeder::class);
     }
 }

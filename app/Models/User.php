@@ -38,6 +38,13 @@ class User extends Authenticatable
         'activity_level',
         'bio',
         'last_active_at',
+        'license_no',
+        'languages',
+        'daily_rate',
+        'experience_years',
+        'specialties',
+        'rating',
+        'reviews_count',
     ];
 
     protected $hidden = [
@@ -53,6 +60,11 @@ class User extends Authenticatable
             'last_active_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
+            'languages' => 'array',
+            'daily_rate' => 'float',
+            'rating' => 'float',
+            'experience_years' => 'integer',
+            'reviews_count' => 'integer',
         ];
     }
 
