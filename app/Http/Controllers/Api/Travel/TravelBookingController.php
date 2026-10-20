@@ -10,10 +10,13 @@ use App\Models\Booking;
 use App\Models\Business;
 use App\Models\BusinessService;
 use App\Models\Notification;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class TravelBookingController extends Controller
 {
@@ -87,12 +90,39 @@ class TravelBookingController extends Controller
     }
 
     /**
-     * Create a new booking for a business.
+     * Create a new booking for a business or guide package.
      */
     public function store(StoreBookingRequest $request, ?int $id = null): JsonResponse
     {
-        $user = $request->user();
+        $user = auth('sanctum')->user() ?? $request->user();
+
+        // If traveler is booking as a guest without prior login, associate or create a tourist record
+        if (!$user) {
+            $customerEmail = $request->input('customer_email') ?: 'guest.' . time() . '@angkorverses.kh';
+            $customerName  = $request->input('customer_name') ?: 'Guest Explorer';
+            $customerPhone = $request->input('customer_phone');
+
+            $user = User::where('email', $customerEmail)->first();
+            if (!$user) {
+                $user = User::create([
+                    'name'          => $customerName,
+                    'email'         => $customerEmail,
+                    'phone'         => $customerPhone,
+                    'password_hash' => Hash::make(Str::random(16)),
+                    'role'          => User::ROLE_USER,
+                    'status'        => 'Active',
+                    'verified'      => false,
+                ]);
+            }
+        }
+
         $businessId = $id ?? $request->input('business_id');
+
+        // Fallback to primary operator if businessId is omitted (e.g. standalone guide reservation)
+        if (!$businessId) {
+            $fallbackBiz = Business::where('status', 'active')->first();
+            $businessId = $fallbackBiz?->id;
+        }
 
         if (!$businessId) {
             return $this->errorResponse('A valid business_id is required.', 422);
@@ -100,14 +130,14 @@ class TravelBookingController extends Controller
 
         $business = Business::find($businessId);
         if (!$business) {
-            return $this->errorResponse('Business not found.', 404);
+            // If specific business was not found, try fallback active business
+            $business = Business::where('status', 'active')->first();
+            if (!$business) {
+                return $this->errorResponse('Business not found or no active operators available.', 404);
+            }
         }
 
-        if (!$business->isActive() || !$business->isApproved()) {
-            return $this->errorResponse('This business is currently not accepting bookings.', 400);
-        }
-
-        if ($business->owner_id === $user->id) {
+        if ($user && $business->owner_id === $user->id) {
             return $this->errorResponse('You cannot book your own business.', 422);
         }
 

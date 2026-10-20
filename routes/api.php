@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Travel\TravelDeletionRequestController;
 use App\Http\Controllers\Api\Travel\TravelEventController;
 use App\Http\Controllers\Api\Travel\TravelFavoriteController;
 use App\Http\Controllers\Api\Travel\TravelGalleryController;
+use App\Http\Controllers\Api\Travel\TravelGuideController;
 use App\Http\Controllers\Api\Travel\TravelPlaceController;
 use App\Http\Controllers\Api\Travel\TravelProvinceController;
 use App\Http\Controllers\Api\Travel\TravelReviewController;
@@ -148,6 +149,10 @@ Route::prefix('travel')->group(function () {
         // Achievements / Badges List
         Route::get('/achievements', [TravelAchievementController::class, 'index']);
 
+        // Accredited Tour Guides Directory
+        Route::get('/guides', [TravelGuideController::class, 'index']);
+        Route::get('/guides/{id}', [TravelGuideController::class, 'show']);
+
         // Safe System Settings
         Route::get('/settings', [TravelSettingController::class, 'index']);
 
@@ -160,6 +165,12 @@ Route::prefix('travel')->group(function () {
         Route::get('/ai/transport', [TravelAiChatController::class, 'transport']);
         Route::get('/transport', [TravelAiChatController::class, 'transport']);
         Route::get('/ai/status', [TravelAiChatController::class, 'status']);
+    });
+
+    // Public Booking Submissions (For both authenticated tourists and guest travelers)
+    Route::middleware('throttle:15,1')->group(function () {
+        Route::post('/bookings', [TravelBookingController::class, 'store']);
+        Route::post('/businesses/{id}/bookings', [TravelBookingController::class, 'store']);
     });
 
     // Public Gallery View Recording (Strictly throttled to prevent view spoofing)

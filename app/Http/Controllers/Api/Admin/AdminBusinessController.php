@@ -24,7 +24,7 @@ class AdminBusinessController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Business::with(['owner', 'category', 'province'])
+        $query = Business::with(['owner', 'category', 'province', 'services'])
             ->withCount(['images', 'services', 'reviews']);
 
         if ($request->has('verification_status')) {

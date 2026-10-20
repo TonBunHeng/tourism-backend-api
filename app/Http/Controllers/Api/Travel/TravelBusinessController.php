@@ -34,7 +34,7 @@ class TravelBusinessController extends Controller
     {
         $user = auth('sanctum')->user();
         
-        $query = Business::with(['category', 'province', 'images'])
+        $query = Business::with(['category', 'province', 'images', 'services'])
             ->withCount(['images', 'services', 'reviews']);
 
         // Travel users can see all businesses

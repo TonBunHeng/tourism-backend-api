@@ -43,6 +43,7 @@ class BusinessResource extends JsonResource
             'cover_image_url' => $this->normalizeUrl($this->cover_image_url),
             'images_count' => $this->whenCounted('images'),
             'services_count' => $this->whenCounted('services'),
+            'services' => BusinessServiceResource::collection($this->whenLoaded('services')),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
