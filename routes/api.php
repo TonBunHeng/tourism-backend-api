@@ -157,6 +157,10 @@ Route::prefix('travel')->group(function () {
         Route::get('/guides', [TravelGuideController::class, 'index']);
         Route::get('/guides/{id}', [TravelGuideController::class, 'show']);
 
+        // Curated Tour Packages Directory
+        Route::get('/tours', [TravelTourController::class, 'index']);
+        Route::get('/tours/{id}', [TravelTourController::class, 'show']);
+
         // Safe System Settings
         Route::get('/settings', [TravelSettingController::class, 'index']);
 
@@ -169,6 +173,11 @@ Route::prefix('travel')->group(function () {
         Route::get('/ai/transport', [TravelAiChatController::class, 'transport']);
         Route::get('/transport', [TravelAiChatController::class, 'transport']);
         Route::get('/ai/status', [TravelAiChatController::class, 'status']);
+    });
+
+    // Public Inquiries & Visitor Contact
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/contact', [TravelContactController::class, 'store']);
     });
 
     // Public Booking Submissions (For both authenticated tourists and guest travelers)
@@ -447,6 +456,13 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
     Route::post('/galleries', [GalleryController::class, 'store']);
     Route::put('/galleries/{id}', [GalleryController::class, 'update']);
 
+    // Tours Management (Accessible across all staff roles)
+    Route::get('/tours', [AdminTourController::class, 'index']);
+    Route::get('/tours/{id}', [AdminTourController::class, 'show']);
+    Route::post('/tours', [AdminTourController::class, 'store']);
+    Route::put('/tours/{id}', [AdminTourController::class, 'update']);
+    Route::post('/tours/{id}/toggle-status', [AdminTourController::class, 'toggleStatus']);
+
     // Reviews Viewing & Replies
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{id}', [ReviewController::class, 'show']);
@@ -509,6 +525,13 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
         Route::put('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
         Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
 
+        // Accredited Tour Guides Management (Admin / Super Admin)
+        Route::get('/guides', [AdminGuideController::class, 'index']);
+        Route::get('/guides/{id}', [AdminGuideController::class, 'show']);
+        Route::post('/guides', [AdminGuideController::class, 'store']);
+        Route::put('/guides/{id}', [AdminGuideController::class, 'update']);
+        Route::delete('/guides/{id}', [AdminGuideController::class, 'destroy']);
+
         // Admin explicit alias (/api/admin/*)
         Route::prefix('admin')->group(function () {
             Route::get('/businesses', [AdminBusinessController::class, 'index']);
@@ -524,6 +547,19 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
             Route::get('/bookings/{id}', [AdminBookingController::class, 'show']);
             Route::put('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
             Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+
+            Route::get('/tours', [AdminTourController::class, 'index']);
+            Route::get('/tours/{id}', [AdminTourController::class, 'show']);
+            Route::post('/tours', [AdminTourController::class, 'store']);
+            Route::put('/tours/{id}', [AdminTourController::class, 'update']);
+            Route::post('/tours/{id}/toggle-status', [AdminTourController::class, 'toggleStatus']);
+            Route::delete('/tours/{id}', [AdminTourController::class, 'destroy']);
+
+            Route::get('/guides', [AdminGuideController::class, 'index']);
+            Route::get('/guides/{id}', [AdminGuideController::class, 'show']);
+            Route::post('/guides', [AdminGuideController::class, 'store']);
+            Route::put('/guides/{id}', [AdminGuideController::class, 'update']);
+            Route::delete('/guides/{id}', [AdminGuideController::class, 'destroy']);
         });
 
         // User Management & Activity Tracking (Strictly Admin / Super Admin)
@@ -574,6 +610,10 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
         Route::delete('/admin/businesses/{id}', [AdminBusinessController::class, 'destroy']);
         Route::delete('/bookings/{id}', [AdminBookingController::class, 'destroy']);
         Route::delete('/admin/bookings/{id}', [AdminBookingController::class, 'destroy']);
+        Route::delete('/tours/{id}', [AdminTourController::class, 'destroy']);
+        Route::delete('/admin/tours/{id}', [AdminTourController::class, 'destroy']);
+        Route::delete('/guides/{id}', [AdminGuideController::class, 'destroy']);
+        Route::delete('/admin/guides/{id}', [AdminGuideController::class, 'destroy']);
         Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
