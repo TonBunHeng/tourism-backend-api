@@ -7,6 +7,7 @@ use App\Http\Resources\PlaceResource;
 use App\Models\Category;
 use App\Models\Place;
 use App\Models\Province;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -132,6 +133,15 @@ class PlaceController extends Controller
         $place = Place::create($validated);
         $place->load(['category', 'province']);
 
+        AuditLogger::log(
+            'place_created',
+            'Place',
+            $place->id,
+            "Created destination '{$place->name}'",
+            null,
+            $validated
+        );
+
         return $this->successResponse(new PlaceResource($place), 'Place created successfully.', 201);
     }
 
@@ -193,8 +203,18 @@ class PlaceController extends Controller
         }
         unset($validated['image']);
 
+        $oldValues = $place->only(array_keys($validated));
         $place->update($validated);
         $place->load(['category', 'province']);
+
+        AuditLogger::log(
+            'place_updated',
+            'Place',
+            $place->id,
+            "Updated destination '{$place->name}'",
+            $oldValues,
+            $validated
+        );
 
         return $this->successResponse(new PlaceResource($place), 'Place updated successfully.');
     }
@@ -207,7 +227,15 @@ class PlaceController extends Controller
             return $this->errorResponse('Place not found.', 404);
         }
 
+        $placeName = $place->name;
         $place->delete();
+
+        AuditLogger::log(
+            'place_deleted',
+            'Place',
+            (int) $id,
+            "Permanently deleted destination '{$placeName}'"
+        );
 
         return $this->successResponse(null, 'Place deleted successfully.');
     }
@@ -223,6 +251,13 @@ class PlaceController extends Controller
         $place->update(['status' => 'Active']);
         $place->load(['category', 'province']);
 
+        AuditLogger::log(
+            'place_approved',
+            'Place',
+            $place->id,
+            "Approved destination '{$place->name}' into active directory"
+        );
+
         return $this->successResponse(new PlaceResource($place), "Place '{$place->name}' approved and activated.");
     }
 
@@ -236,6 +271,13 @@ class PlaceController extends Controller
 
         $place->update(['status' => 'Inactive']);
         $place->load(['category', 'province']);
+
+        AuditLogger::log(
+            'place_rejected',
+            'Place',
+            $place->id,
+            "Rejected destination '{$place->name}'"
+        );
 
         return $this->successResponse(new PlaceResource($place), "Place '{$place->name}' rejected.");
     }

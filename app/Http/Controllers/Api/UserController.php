@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -108,6 +109,13 @@ class UserController extends Controller
 
         $user = User::create($validated);
 
+        AuditLogger::log(
+            'user_created',
+            'User',
+            $user->id,
+            "Created user '{$user->name}' with role '{$user->role}'"
+        );
+
         return $this->successResponse(new UserResource($user), 'User created successfully.', 201);
     }
 
@@ -178,6 +186,15 @@ class UserController extends Controller
 
         $user->update($validated);
 
+        AuditLogger::log(
+            'user_updated',
+            'User',
+            $user->id,
+            "Updated user profile/role for '{$user->name}'",
+            null,
+            $validated
+        );
+
         return $this->successResponse(new UserResource($user), 'User updated successfully.');
     }
 
@@ -206,7 +223,16 @@ class UserController extends Controller
             return $this->errorResponse('Administrators cannot delete other Administrator accounts.', 403);
         }
 
+        $userName = $user->name;
+        $userRole = $user->role;
         $user->delete();
+
+        AuditLogger::log(
+            'user_deleted',
+            'User',
+            (int) $id,
+            "Permanently deleted user '{$userName}' ({$userRole})"
+        );
 
         return $this->successResponse(null, 'User deleted successfully.');
     }
@@ -239,7 +265,15 @@ class UserController extends Controller
             'status' => ['required', Rule::in(['Active', 'Inactive', 'Suspended'])],
         ]);
 
+        $prevStatus = $user->status;
         $user->update(['status' => $validated['status']]);
+
+        AuditLogger::log(
+            'user_status_changed',
+            'User',
+            $user->id,
+            "Changed user '{$user->name}' status from '{$prevStatus}' to '{$validated['status']}'"
+        );
 
         return $this->successResponse(new UserResource($user), 'User status updated successfully.');
     }

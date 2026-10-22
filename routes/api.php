@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\Travel\TravelTripController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserAchievementController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserTrackingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -592,6 +593,12 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
         Route::post('/security-alerts/mark-all-read', [SecurityAlertController::class, 'markAllRead']);
         Route::delete('/security-alerts/{id}', [SecurityAlertController::class, 'destroy']);
         Route::delete('/security-alerts', [SecurityAlertController::class, 'clearAll']);
+
+        // User Activity & Action Tracking (Admin & Super Admin: View, Filter, Stats & Export)
+        Route::get('/user-tracking', [UserTrackingController::class, 'index']);
+        Route::get('/user-tracking/stats', [UserTrackingController::class, 'statistics']);
+        Route::get('/user-tracking/export', [UserTrackingController::class, 'exportData']);
+        Route::get('/user-tracking/{id}', [UserTrackingController::class, 'show']);
     });
 
     /*
@@ -622,5 +629,11 @@ Route::middleware(['auth:sanctum', 'admin.role'])->group(function () {
         Route::get('/deletion-requests', [DeletionRequestController::class, 'index']);
         Route::get('/deletion-requests/{id}', [DeletionRequestController::class, 'show']);
         Route::put('/deletion-requests/{id}/status', [DeletionRequestController::class, 'updateStatus']);
+
+        // User Tracking Management & CRUD (Super Admin Only: Create, Update, Delete, Clear)
+        Route::post('/user-tracking', [UserTrackingController::class, 'store']);
+        Route::put('/user-tracking/{id}', [UserTrackingController::class, 'update']);
+        Route::delete('/user-tracking/{id}', [UserTrackingController::class, 'destroy']);
+        Route::delete('/user-tracking', [UserTrackingController::class, 'clearAll']);
     });
 });

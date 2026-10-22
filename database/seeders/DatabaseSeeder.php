@@ -131,5 +131,10 @@ class DatabaseSeeder extends Seeder
         // 13. Curated Tour Packages
         // ----------------------------------------------------------------------
         $this->call(TourSeeder::class);
+
+        // ----------------------------------------------------------------------
+        // 14. User Action & Audit Tracking Logs
+        // ----------------------------------------------------------------------
+        $this->call(AuditLogSeeder::class);
     }
 }
