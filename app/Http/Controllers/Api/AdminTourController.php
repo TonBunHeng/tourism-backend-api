@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tour;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,6 +105,15 @@ class AdminTourController extends Controller
 
         $tour = Tour::create($validated);
 
+        AuditLogger::log(
+            'tour_created',
+            'Tour',
+            $tour->id,
+            "Created tour package: {$tour->title}",
+            null,
+            ['title' => $tour->title, 'destination' => $tour->destination, 'price' => $tour->price]
+        );
+
         return $this->successResponse($tour, 'Tour package created successfully.', 201);
     }
 
@@ -160,6 +170,15 @@ class AdminTourController extends Controller
 
         $tour->update($validated);
 
+        AuditLogger::log(
+            'tour_updated',
+            'Tour',
+            $tour->id,
+            "Updated tour package: {$tour->title}",
+            null,
+            ['title' => $tour->title, 'destination' => $tour->destination, 'price' => $tour->price]
+        );
+
         return $this->successResponse($tour, 'Tour package updated successfully.');
     }
 
@@ -173,7 +192,16 @@ class AdminTourController extends Controller
             return $this->errorResponse('Tour package not found.', 404);
         }
 
+        $title = $tour->title;
         $tour->delete();
+
+        AuditLogger::log(
+            'tour_deleted',
+            'Tour',
+            (int) $id,
+            "Deleted tour package \"{$title}\" (ID: {$id})"
+        );
+
         return $this->successResponse(null, 'Tour package deleted successfully.');
     }
 
@@ -189,6 +217,13 @@ class AdminTourController extends Controller
 
         $tour->status = $tour->status === 'active' ? 'draft' : 'active';
         $tour->save();
+
+        AuditLogger::log(
+            'tour_status_changed',
+            'Tour',
+            $tour->id,
+            "Changed status of tour \"{$tour->title}\" to {$tour->status}"
+        );
 
         return $this->successResponse($tour, "Tour status updated to {$tour->status}.");
     }

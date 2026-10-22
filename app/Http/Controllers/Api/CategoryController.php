@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +55,15 @@ class CategoryController extends Controller
 
         $category = Category::create($validated);
 
+        AuditLogger::log(
+            'category_created',
+            'Category',
+            $category->id,
+            "Created platform category: {$category->name}",
+            null,
+            ['name' => $category->name, 'status' => $category->status]
+        );
+
         return $this->successResponse(new CategoryResource($category), 'Category created successfully.', 201);
     }
 
@@ -76,6 +86,12 @@ class CategoryController extends Controller
             return $this->errorResponse('Category not found.', 404);
         }
 
+        $oldValues = [
+            'name' => $category->name,
+            'status' => $category->status,
+            'color' => $category->color,
+        ];
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('categories', 'name')->ignore($category->id)],
             'description' => 'nullable|string',
@@ -84,6 +100,15 @@ class CategoryController extends Controller
         ]);
 
         $category->update($validated);
+
+        AuditLogger::log(
+            'category_updated',
+            'Category',
+            $category->id,
+            "Updated category: {$category->name}",
+            $oldValues,
+            ['name' => $category->name, 'status' => $category->status]
+        );
 
         return $this->successResponse(new CategoryResource($category), 'Category updated successfully.');
     }
@@ -96,7 +121,15 @@ class CategoryController extends Controller
             return $this->errorResponse('Category not found.', 404);
         }
 
+        $name = $category->name;
         $category->delete();
+
+        AuditLogger::log(
+            'category_deleted',
+            'Category',
+            (int) $id,
+            "Deleted category \"{$name}\" (ID: {$id})"
+        );
 
         return $this->successResponse(null, 'Category deleted successfully.');
     }

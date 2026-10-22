@@ -147,6 +147,10 @@ class UserTrackingController extends Controller
                 'total' => $logs->total(),
             ],
             'meta' => [
+                'total' => $logs->total(),
+                'last_page' => $logs->lastPage(),
+                'current_page' => $logs->currentPage(),
+                'per_page' => $logs->perPage(),
                 'total_logs' => $totalLogs,
                 'today_actions' => $todayActions,
                 'admin_actions' => $adminActions,
@@ -369,7 +373,34 @@ class UserTrackingController extends Controller
         }
 
         if ($request->filled('action') && $request->action !== 'all') {
-            $query->where('action', 'like', "%{$request->action}%");
+            $actionFilter = $request->action;
+            if ($actionFilter === 'create') {
+                $query->where(fn($q) => $q->where('action', 'like', '%create%')->orWhere('action', 'like', '%store%')->orWhere('action', 'like', '%add%'));
+            } elseif ($actionFilter === 'update') {
+                $query->where(fn($q) => $q->where('action', 'like', '%update%')->orWhere('action', 'like', '%edit%')->orWhere('action', 'like', '%modify%'));
+            } elseif ($actionFilter === 'delete') {
+                $query->where(fn($q) => $q->where('action', 'like', '%delete%')->orWhere('action', 'like', '%destroy%')->orWhere('action', 'like', '%remove%'));
+            } elseif ($actionFilter === 'approve') {
+                $query->where(fn($q) => $q->where('action', 'like', '%approve%')->orWhere('action', 'like', '%publish%')->orWhere('action', 'like', '%verify%'));
+            } elseif ($actionFilter === 'reject') {
+                $query->where(fn($q) => $q->where('action', 'like', '%reject%')->orWhere('action', 'like', '%suspend%')->orWhere('action', 'like', '%ban%'));
+            } elseif ($actionFilter === 'auth') {
+                $query->where(fn($q) => $q->where('action', 'like', '%login%')->orWhere('action', 'like', '%logout%')->orWhere('action', 'like', '%auth%'));
+            } else {
+                $query->where('action', 'like', "%{$actionFilter}%");
+            }
+        }
+
+        // Filter by period (today, 7d, 30d)
+        if ($request->filled('period')) {
+            $period = $request->period;
+            if ($period === 'today') {
+                $query->whereDate('created_at', Carbon::today());
+            } elseif ($period === '7d') {
+                $query->where('created_at', '>=', Carbon::now()->subDays(7));
+            } elseif ($period === '30d') {
+                $query->where('created_at', '>=', Carbon::now()->subDays(30));
+            }
         }
 
         if ($request->filled('search')) {

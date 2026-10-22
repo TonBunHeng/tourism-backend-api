@@ -25,10 +25,10 @@ class AuditLogger
                 return null;
             }
 
-            $user = Auth::user();
+            $user = request()->user() ?? auth('sanctum')->user() ?? Auth::user();
             $finalUserId = $userId ?? ($user ? $user->id : null);
-            $userName = $user ? $user->name : ($finalUserId ? 'User #' . $finalUserId : 'System / Guest');
-            $userRole = $user ? $user->role : 'Guest';
+            $userName = $user ? $user->name : ($finalUserId ? 'User #' . $finalUserId : 'System User');
+            $userRole = $user ? ($user->role ?? 'admin') : 'admin';
 
             return AuditLog::create([
                 'user_id' => $finalUserId,
@@ -37,11 +37,11 @@ class AuditLogger
                 'action' => $action,
                 'entity_type' => $entityType,
                 'entity_id' => $entityId,
-                'description' => $description,
+                'description' => substr($description ?? '', 0, 255),
                 'old_values' => $oldValues,
                 'new_values' => $newValues,
-                'ip_address' => Request::ip(),
-                'user_agent' => Request::userAgent(),
+                'ip_address' => Request::ip() ?? '127.0.0.1',
+                'user_agent' => substr(Request::userAgent() ?? '', 0, 500),
             ]);
         } catch (\Throwable $e) {
             // Silently ignore failures if audit_logs table or features are decommissioned

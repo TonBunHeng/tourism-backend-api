@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Models\EventTag;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -144,6 +145,15 @@ class EventController extends Controller
 
         $event->load(['place', 'province', 'tags']);
 
+        AuditLogger::log(
+            'event_created',
+            'Event',
+            $event->id,
+            "Created cultural event: {$event->title}",
+            null,
+            ['title' => $event->title, 'location' => $event->location, 'status' => $event->status]
+        );
+
         return $this->successResponse(new EventResource($event), 'Event created successfully.', 201);
     }
 
@@ -165,6 +175,13 @@ class EventController extends Controller
         if (!$event) {
             return $this->errorResponse('Event not found.', 404);
         }
+
+        $oldValues = [
+            'title' => $event->title,
+            'status' => $event->status,
+            'start_date' => $event->start_date ? $event->start_date->format('Y-m-d') : null,
+            'location' => $event->location,
+        ];
 
         if ($request->input('status') === 'Auto') {
             $startDate = $request->input('start_date') ?? $event->start_date?->format('Y-m-d');
@@ -221,6 +238,15 @@ class EventController extends Controller
         $event->update($validated);
         $event->load(['place', 'province', 'tags']);
 
+        AuditLogger::log(
+            'event_updated',
+            'Event',
+            $event->id,
+            "Updated cultural event: {$event->title}",
+            $oldValues,
+            ['title' => $event->title, 'status' => $event->status, 'location' => $event->location]
+        );
+
         return $this->successResponse(new EventResource($event), 'Event updated successfully.');
     }
 
@@ -232,7 +258,15 @@ class EventController extends Controller
             return $this->errorResponse('Event not found.', 404);
         }
 
+        $title = $event->title;
         $event->delete();
+
+        AuditLogger::log(
+            'event_deleted',
+            'Event',
+            (int) $id,
+            "Deleted cultural event \"{$title}\" (ID: {$id})"
+        );
 
         return $this->successResponse(null, 'Event deleted successfully.');
     }
