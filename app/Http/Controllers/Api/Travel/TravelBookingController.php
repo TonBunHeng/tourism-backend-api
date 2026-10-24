@@ -137,6 +137,14 @@ class TravelBookingController extends Controller
             }
         }
 
+        if ($business->verification_status && $business->verification_status !== 'approved') {
+            return $this->errorResponse('This business is not approved to accept bookings.', 400);
+        }
+
+        if ($business->status !== 'active') {
+            return $this->errorResponse('This business is currently inactive.', 400);
+        }
+
         if ($user && $business->owner_id === $user->id) {
             return $this->errorResponse('You cannot book your own business.', 422);
         }

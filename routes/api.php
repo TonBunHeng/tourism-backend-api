@@ -398,9 +398,10 @@ Route::prefix('guide')
 |--------------------------------------------------------------------------
 */
 
-// Admin Login (Strictly Rate-Limited; public /auth/register removed for security)
+// Public Auth & Login (Strictly Rate-Limited)
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/auth/register', [AuthController::class, 'register']);
 });
 
 // Protected Admin & Management APIs
