@@ -59,7 +59,7 @@ This unified backend powers both the **Admin Management Web (`tourism-admin`)** 
 - **Framework:** Laravel 11.x / 12.x (PHP 8.2+)
 - **Database:** MySQL 8.0+ / SQLite for testing
 - **Authentication:** Laravel Sanctum (Bearer Tokens)
-- **OAuth Providers:** Google OAuth 2.0 & Facebook Graph API
+- **OAuth Providers:** Google OAuth 2.0
 - **Architecture:** Form Requests, API Resources, Role Middleware (`admin.role`), Standard `ApiResponse` Trait
 
 ---
@@ -146,17 +146,6 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
   }
   ```
 
-#### Facebook OAuth Login
-- **Endpoint:** `POST /api/travel/auth/facebook`
-- **Auth:** Public
-- **Request Body:**
-  ```json
-  {
-    "access_token": "facebook_access_token...",
-    "facebook_id": "1234567890",
-    "name": "Sophea Traveler"
-  }
-  ```
 
 #### Get Current Authenticated Tourist
 - **Endpoint:** `GET /api/travel/auth/me`

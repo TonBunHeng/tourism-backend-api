@@ -102,15 +102,12 @@ Route::prefix('travel')->group(function () {
         Route::post('/auth/register', [TravelAuthController::class, 'register']);
         Route::post('/auth/login', [TravelAuthController::class, 'login']);
         Route::post('/auth/google', [TravelAuthController::class, 'googleLogin']);
-        Route::post('/auth/facebook', [TravelAuthController::class, 'facebookLogin']);
     });
 
     // OAuth Redirect/Callbacks (Throttled; ensure stateless PKCE or web session middleware is used)
     Route::middleware('throttle:10,1')->group(function () {
         Route::get('/auth/google/redirect', [TravelAuthController::class, 'redirectToGoogle']);
         Route::get('/auth/google/callback', [TravelAuthController::class, 'handleGoogleCallback']);
-        Route::get('/auth/facebook/redirect', [TravelAuthController::class, 'redirectToFacebook']);
-        Route::get('/auth/facebook/callback', [TravelAuthController::class, 'handleFacebookCallback']);
     });
 
     // 1.2 Public Read-Only Directory & Content (Standard API Throttling)
