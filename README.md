@@ -33,19 +33,28 @@ This unified backend powers both the **Admin Management Web (`tourism-admin`)** 
 - [Travel / User API Reference (`/api/travel/*`)](#travel--user-api-reference-apitravel)
   - [1. Authentication](#1-authentication)
   - [2. Tourist Destinations (Places)](#2-tourist-destinations-places)
-  - [3. Provinces & Locations](#3-provinces--locations)
-  - [4. Categories](#4-categories)
-  - [5. Events & Festivals](#5-events--festivals)
-  - [6. Media Gallery](#6-media-gallery)
-  - [7. Reviews & Ratings](#7-reviews--ratings)
-  - [8. Favorites & Wishlist](#8-favorites--wishlist)
-  - [9. Trip Planner & Itineraries](#9-trip-planner--itineraries)
-  - [10. Gamification & Achievements](#10-gamification--achievements)
-  - [11. Privacy & Deletion Requests](#11-privacy--deletion-requests)
-  - [12. Public App Settings](#12-public-app-settings)
-  - [13. AI Assistant & Tourism Intelligence](#13-ai-assistant--tourism-intelligence)
+  - [3. Businesses & Local Directory](#3-businesses--local-directory)
+  - [4. Provinces & Locations](#4-provinces--locations)
+  - [5. Categories](#5-categories)
+  - [6. Events & Festivals](#6-events--festivals)
+  - [7. Curated Tour Packages](#7-curated-tour-packages)
+  - [8. Accredited Tour Guides](#8-accredited-tour-guides)
+  - [9. Media Gallery](#9-media-gallery)
+  - [10. Reviews & Ratings](#10-reviews--ratings)
+  - [11. Favorites & Wishlist](#11-favorites--wishlist)
+  - [12. Customer Bookings & Reservations](#12-customer-bookings--reservations)
+  - [13. Trip Planner & Itineraries](#13-trip-planner--itineraries)
+  - [14. Gamification & Achievements](#14-gamification--achievements)
+  - [15. Privacy & Deletion Requests](#15-privacy--deletion-requests)
+  - [16. Push Notifications & Notification Center](#16-push-notifications--notification-center)
+  - [17. Public App Settings & Emergency Hotlines](#17-public-app-settings--emergency-hotlines)
+  - [18. Contact & Public Inquiries](#18-contact--public-inquiries)
+  - [19. AI Assistant & Tourism Intelligence](#19-ai-assistant--tourism-intelligence)
+- [Business Owner REST API (`/api/business/*`)](#business-owner-bookings-reports--financial-analytics-api)
+- [Guide / Editor REST API (`/api/guide/*`)](#guide--content-editor-rest-api-apiguide)
 - [Admin Management API Reference (`/api/*`)](#admin-management-api-reference-api)
   - [Security Alerts & IP Defense](#security-alerts--ip-defense)
+  - [Real-Time Activity Tracking](#real-time-admin--super-admin-system-monitoring-tourism-admin---tourism-travel)
 - [Standard API Response Format](#standard-api-response-format)
 - [Installation & Setup](#installation--setup)
 - [Testing](#testing)
@@ -56,11 +65,11 @@ This unified backend powers both the **Admin Management Web (`tourism-admin`)** 
 
 ## Tech Stack
 
-- **Framework:** Laravel 11.x / 12.x (PHP 8.2+)
+- **Framework:** Laravel 12.x / 13.x (PHP 8.3+ / PHP 8.4 Docker)
 - **Database:** MySQL 8.0+ / SQLite for testing
 - **Authentication:** Laravel Sanctum (Bearer Tokens)
-- **OAuth Providers:** Google OAuth 2.0
-- **Architecture:** Form Requests, API Resources, Role Middleware (`admin.role`), Standard `ApiResponse` Trait
+- **OAuth Providers:** Google OAuth 2.0 (Socialite)
+- **Architecture:** Form Requests, API Resources, Role Middleware (`admin.role`, `role:admin,super_admin`, `role:business_owner`), Standard `ApiResponse` Trait
 
 ---
 
@@ -211,35 +220,66 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 3. Provinces & Locations
+### 3. Businesses & Local Directory
+
+- `GET /api/travel/businesses`: List verified businesses with search and filters (`category_id`, `province_id`, `search`, `featured`).
+- `GET /api/travel/businesses/{id}`: Detailed business profile with opening hours, services, gallery, promotions, and approved reviews.
+- `GET /api/travel/businesses/{id}/services`: List offered services with pricing and duration.
+- `GET /api/travel/businesses/{id}/hours`: Weekly operating hours and holiday schedules.
+- `GET /api/travel/businesses/{id}/gallery`: Business photo and media showcase.
+- `GET /api/travel/businesses/{id}/promotions`: Active seasonal discounts and specials.
+- `GET /api/travel/businesses/{id}/events`: Events hosted by the business.
+- `GET /api/travel/businesses/{id}/reviews`: Approved customer reviews and owner replies.
+- `POST /api/travel/businesses/{id}/reviews` (`Bearer Token`): Post a review for a business.
+
+---
+
+### 4. Provinces & Locations
 
 - `GET /api/travel/provinces`: List all active Cambodian provinces with attraction and event counts.
 - `GET /api/travel/provinces/{id}`: Detailed view of a province with associated tourist destinations and cultural events.
 
 ---
 
-### 4. Categories
+### 5. Categories
 
 - `GET /api/travel/categories`: List tourism categories (Temples, Eco-Tourism, Beaches, Cultural Heritage, Cuisine).
 - `GET /api/travel/categories/{id}`: Category details with associated attractions.
 
 ---
 
-### 5. Events & Festivals
+### 6. Events & Festivals
 
 - `GET /api/travel/events`: List events filterable by `status` (`Upcoming`, `Ongoing`, `Past`), `province_id`, `category`, `search`, and date range.
 - `GET /api/travel/events/{id}`: Event details with venue, organizer, dates, and tags.
 
 ---
 
-### 6. Media Gallery
+### 7. Curated Tour Packages
 
-- `GET /api/travel/galleries`: Browse photo & video galleries (filterable by `place_id`, `media_type` [`image`, `video`], `tag`, `search`).
-- `GET /api/travel/galleries/{id}`: View single gallery media item with view counter.
+- `GET /api/travel/tours`: Browse curated travel tour packages (filterable by `destination`, `duration_days`, `price`, `search`).
+- `GET /api/travel/tours/{id}`: Complete tour itinerary breakdown, included amenities, departure dates, and pricing.
 
 ---
 
-### 7. Reviews & Ratings
+### 8. Accredited Tour Guides
+
+- `GET /api/travel/guides`: List licensed tour guides filterable by `location`, `language`, and rating.
+- `GET /api/travel/guides/{id}`: Guide profile with license number, spoken languages, daily rate, specialties, and tourist reviews.
+
+---
+
+### 9. Media Gallery
+
+- `GET /api/travel/galleries`: Browse photo & video galleries (filterable by `place_id`, `media_type` [`image`, `video`], `tag`, `search`).
+- `GET /api/travel/galleries/{id}`: View single gallery media item with view counter.
+- `POST /api/travel/galleries/{id}/view`: Increment verified view counter.
+- `POST /api/travel/galleries/{id}/comments` (`Bearer Token`): Post a comment on a gallery item.
+- `POST /api/travel/galleries/{id}/like` (`Bearer Token`): Toggle like on a media item.
+
+---
+
+### 10. Reviews & Ratings
 
 - `GET /api/travel/reviews`: List approved destination reviews (filter by `place_id`, `rating`).
 - `GET /api/travel/reviews/{id}`: View review details with attached images and guide replies.
@@ -262,7 +302,7 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 8. Favorites & Wishlist
+### 11. Favorites & Wishlist
 
 - `GET /api/travel/favorites` (`Bearer Token`): Retrieve user's saved wishlist destinations.
 - `POST /api/travel/favorites` (`Bearer Token`): Save place to wishlist.
@@ -272,7 +312,17 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 9. Trip Planner & Itineraries
+### 12. Customer Bookings & Reservations
+
+- `POST /api/travel/bookings`: Submit reservation inquiry for tours, businesses, or experiences (supports authenticated users and guest bookings).
+- `POST /api/travel/businesses/{id}/bookings`: Direct booking inquiry for a specific business establishment.
+- `GET /api/travel/bookings` (`Bearer Token`): Retrieve authenticated tourist's booking history and statuses (`pending`, `confirmed`, `completed`, `cancelled`).
+- `GET /api/travel/bookings/{id}` (`Bearer Token`): View specific booking details and confirmation notes.
+- `POST /api/travel/bookings/{id}/cancel` (`Bearer Token`): Cancel booking reservation.
+
+---
+
+### 13. Trip Planner & Itineraries
 
 - `GET /api/travel/trips` (`Bearer Token`): List current user's travel plans with activity count.
 - `POST /api/travel/trips` (`Bearer Token`): Create new trip plan with day-by-day activities.
@@ -307,14 +357,14 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 10. Gamification & Achievements
+### 14. Gamification & Achievements
 
 - `GET /api/travel/achievements`: List available badges (*Angkor Explorer*, *Heritage Master*, *Wanderlust Explorer*, *Trip Planner Pioneer*, *Gallery Contributor*, *Cambodia Heritage Champion*).
 - `GET /api/travel/achievements/my` (`Bearer Token`): Retrieve user's unlocked badges and automatically calculate new achievements.
 
 ---
 
-### 11. Privacy & Deletion Requests
+### 15. Privacy & Deletion Requests
 
 - `GET /api/travel/deletion-requests` (`Bearer Token`): View status of submitted deletion requests.
 - `POST /api/travel/deletion-requests` (`Bearer Token`): Submit account or item deletion request for admin review.
@@ -327,7 +377,7 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 12. Push Notifications & Notification Center
+### 16. Push Notifications & Notification Center
 
 - `GET /api/travel/notifications` (`Bearer Token`): Fetch notifications with optional filters (`category`, `unread_only`, `search`).
 - `GET /api/travel/notifications/unread-count` (`Bearer Token`): Get current unread notification count badge.
@@ -341,13 +391,27 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ---
 
-### 13. Public App Settings
+### 17. Public App Settings & Emergency Hotlines
 
-- `GET /api/travel/settings`: Public application configuration, emergency contacts (Tourist Police, Ambulance, Fire), support emails, and privacy URLs.
+- `GET /api/travel/settings`: Public application configuration, emergency contacts (Tourist Police: `117`, Ambulance: `119`, Fire: `118`), support emails, and privacy URLs.
 
 ---
 
-### 14. AI Assistant & Tourism Intelligence
+### 18. Contact & Public Inquiries
+
+- `POST /api/travel/contact`: Submit general travel inquiry, support request, or feedback.
+  ```json
+  {
+    "name": "Alex Morgan",
+    "email": "alex@example.com",
+    "subject": "Private Guided Angkor Sunrise Tour",
+    "message": "Looking for certified English speaking guide for 3 people."
+  }
+  ```
+
+---
+
+### 19. AI Assistant & Tourism Intelligence
 
 Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.vercel.app/`).
 
@@ -418,20 +482,54 @@ Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.verc
 
 | Method | Endpoint | Description | Guard / Role |
 |---|---|---|---|
-| `GET` | `/api/dashboard` | Dashboard statistical summary | `admin.role` |
+| `GET` | `/api/dashboard` | Dashboard statistical summary & pending queue counters | `admin.role` |
 | `GET` | `/api/users` | List and search all users | `admin.role` (`Super Admin`, `Admin`) |
 | `POST` | `/api/users` | Create user with assigned role | `admin.role` (`Super Admin`, `Admin`) |
 | `PUT` | `/api/users/{id}/status` | Update user status (`Active`/`Suspended`) | `admin.role` (`Super Admin`, `Admin`) |
-| `POST` | `/api/places` | Create new tourist destination | `admin.role` |
+| `DELETE` | `/api/users/{id}` | Permanently delete user | `role:super_admin` |
+| `GET` | `/api/places` | List destinations for management & status review | `admin.role` |
+| `POST` | `/api/places` | Create new tourist destination draft | `admin.role` |
 | `PUT` | `/api/places/{id}` | Update destination details | `admin.role` |
-| `DELETE` | `/api/places/{id}` | Delete destination | `admin.role` (`Super Admin`, `Admin`) |
-| `POST` | `/api/events` | Create event schedule | `admin.role` |
-| `PUT` | `/api/reviews/{id}/status` | Moderate review (`Approved`/`Rejected`) | `admin.role` |
-| `POST` | `/api/reviews/{id}/replies` | Staff reply to review | `admin.role` |
-| `GET` | `/api/security-alerts` | View rate limits & intrusion alerts | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/places/{id}/approve` | Approve destination draft (`status = Active`) | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/places/{id}/reject` | Reject destination draft (`status = Inactive`) | `admin.role` (`Super Admin`, `Admin`) |
+| `DELETE` | `/api/places/{id}` | Permanently delete destination | `role:super_admin` |
+| `GET` | `/api/businesses` | List all registered businesses with verification status | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/businesses/{id}/approve` | Approve business verification application | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/businesses/{id}/reject` | Reject business verification application | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/businesses/{id}/suspend` | Suspend business operations | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/businesses/{id}/activate` | Re-activate suspended business | `admin.role` (`Super Admin`, `Admin`) |
+| `DELETE` | `/api/businesses/{id}` | Permanently delete business listing | `role:super_admin` |
+| `GET` | `/api/bookings` | View and filter all system customer bookings | `admin.role` (`Super Admin`, `Admin`) |
+| `PUT` | `/api/bookings/{id}/status` | Update booking status (`confirmed`, `completed`, `cancelled`) | `admin.role` (`Super Admin`, `Admin`) |
+| `DELETE` | `/api/bookings/{id}` | Permanently delete booking record | `role:super_admin` |
+| `GET` | `/api/tours` | List curated tour packages | `admin.role` |
+| `POST` | `/api/tours` | Create new tour package | `admin.role` |
+| `PUT` | `/api/tours/{id}` | Update tour package | `admin.role` |
+| `POST` | `/api/tours/{id}/toggle-status` | Toggle active/inactive tour status | `admin.role` |
+| `DELETE` | `/api/tours/{id}` | Permanently delete tour package | `role:super_admin` |
+| `GET` | `/api/guides` | List accredited tour guides | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/guides` | Register new certified guide profile | `admin.role` (`Super Admin`, `Admin`) |
+| `PUT` | `/api/guides/{id}` | Update tour guide details | `admin.role` (`Super Admin`, `Admin`) |
+| `DELETE` | `/api/guides/{id}` | Permanently delete guide record | `role:super_admin` |
+| `POST` | `/api/events` | Create cultural event schedule | `admin.role` |
+| `PUT` | `/api/events/{id}` | Update cultural event details | `admin.role` |
+| `DELETE` | `/api/events/{id}` | Permanently delete cultural event | `role:super_admin` |
+| `GET` | `/api/galleries` | Curate media gallery items | `admin.role` |
+| `POST` | `/api/galleries` | Upload new photo or video asset | `admin.role` |
+| `DELETE` | `/api/galleries/{id}` | Permanently delete gallery asset | `role:super_admin` |
+| `PUT` | `/api/reviews/{id}/status` | Moderate review status (`Approved`/`Rejected`) | `admin.role` (`Super Admin`, `Admin`) |
+| `POST` | `/api/reviews/{id}/replies` | Official administrative reply to review | `admin.role` |
+| `DELETE` | `/api/reviews/{id}` | Permanently delete abusive review | `role:super_admin` |
+| `GET` | `/api/reports/analytics` | Statistical analytics data for charts | `admin.role` |
+| `GET` | `/api/security-alerts` | View rate limits, failed logins & intrusion alarms | `admin.role` (`Super Admin`, `Admin`) |
 | `POST` | `/api/security-alerts/block-ip` | Manually block abusive IP | `admin.role` (`Super Admin`, `Admin`) |
-| `PUT` | `/api/deletion-requests/{id}/status` | Process account deletion request | `admin.role` (`Super Admin`) |
-| `PUT` | `/api/settings` | Update system-wide configurations | `admin.role` (`Super Admin`) |
+| `POST` | `/api/security-alerts/unblock-ip` | Remove IP address from blocklist | `admin.role` (`Super Admin`, `Admin`) |
+| `GET` | `/api/user-tracking` | Real-time user online tracking & chronological audit logs | `admin.role` (`Super Admin`, `Admin`) |
+| `GET` | `/api/user-tracking/export` | Export audit trail logs (CSV / JSON) | `admin.role` (`Super Admin`, `Admin`) |
+| `GET` | `/api/deletion-requests` | View user account & content deletion requests queue | `role:super_admin` |
+| `PUT` | `/api/deletion-requests/{id}/status` | Process and approve/reject deletion requests | `role:super_admin` |
+| `PUT` | `/api/settings` | Update system-wide configurations & emergency contacts | `admin.role` (`Super Admin`) |
+| `POST` | `/api/upload` | Upload media image/video file | `admin.role` |
 
 ---
 
@@ -529,9 +627,29 @@ php artisan test
 | **VIT Vong** | **Tourist (User)** (`user`) | `vit.vong@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 | **Ou Sreylin** | **Tourist (User)** (`user`) | `ou.sreylin@example.com` | `password123` | `tourism-travel` (Travel Web / Mobile) |
 
+## Guide / Content Editor REST API (`/api/guide/*`)
+
+Certified Tour Guides and Tourism Content Editors (`guide_editor`, `admin`, `super_admin`) can manage heritage content drafts via the following endpoints:
+
+- `GET /api/guide/dashboard`: Guide dashboard overview, place draft metrics, and inquiries count.
+- `GET /api/guide/places`: List destinations authored or submitted by the guide.
+- `POST /api/guide/places`: Submit new destination draft for admin review (`status` defaults to `Pending`).
+- `GET /api/guide/places/{id}`: View single authored destination details.
+- `PUT /api/guide/places/{id}`: Update authored destination information.
+- `DELETE /api/guide/places/{id}`: Delete authored draft destination.
+- `GET /api/guide/events`: List authored cultural events.
+- `POST /api/guide/events`: Submit new cultural festival or event.
+- `PUT /api/guide/events/{id}`: Update event schedule and venue.
+- `DELETE /api/guide/events/{id}`: Remove event schedule.
+- `GET /api/guide/galleries`: Browse uploaded photography and video assets.
+- `POST /api/guide/galleries`: Upload media assets to public gallery.
+- `DELETE /api/guide/galleries/{id}`: Remove media asset.
+- `GET /api/guide/reviews`: View reviews on authored destinations and tour packages.
+- `POST /api/guide/reviews/{id}/reply`: Post verified guide reply to tourist review.
+
 ---
 
-## Pending Review & Verification Workflow`
+## Pending Review & Verification Workflow
 
 The system provides a complete **Pending Review -> Approved & Active** request moderation pipeline for **Business Owners** and **Tourism Content Editors**:
 
