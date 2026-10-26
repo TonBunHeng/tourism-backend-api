@@ -413,7 +413,7 @@ All Travel endpoints share the `/api/travel` prefix and are consumed identically
 
 ### 19. AI Assistant & Tourism Intelligence
 
-Powered by the **Angkor Verse AI Microservice** (`https://aichat-backend-pi.vercel.app/`).
+Powered by the local **Angkor Verse AI Microservice** (`aichatbot` on `http://127.0.0.1:8001`).
 
 #### AI Tourism Chat Assistant
 - **Endpoint:** `POST /api/travel/ai/chat` (or `POST /api/travel/ai-chat`)

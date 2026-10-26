@@ -50,27 +50,32 @@ class TravelAiChatController extends Controller
             $context['language'] = $validated['language'];
         }
 
-        // Find or create AI Conversation
-        $conversation = AiConversation::firstOrCreate(
-            ['session_id' => $sessionId],
-            [
-                'user_id' => $user?->id,
-                'title' => Str::limit($validated['message'], 40),
-                'province' => $validated['province'] ?? null,
-                'category' => $validated['category'] ?? null,
-                'language' => $validated['language'] ?? 'en',
-            ]
-        );
+        // Find or create AI Conversation (optional history persistence)
+        $conversation = null;
+        try {
+            $conversation = AiConversation::firstOrCreate(
+                ['session_id' => $sessionId],
+                [
+                    'user_id' => $user?->id,
+                    'title' => Str::limit($validated['message'], 40),
+                    'province' => $validated['province'] ?? null,
+                    'category' => $validated['category'] ?? null,
+                    'language' => $validated['language'] ?? 'en',
+                ]
+            );
 
-        if ($user && !$conversation->user_id) {
-            $conversation->update(['user_id' => $user->id]);
+            if ($user && !$conversation->user_id) {
+                $conversation->update(['user_id' => $user->id]);
+            }
+
+            // Record User Message
+            $conversation->messages()->create([
+                'role' => 'user',
+                'content' => $validated['message'],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AI chat conversation logging skipped: ' . $e->getMessage());
         }
-
-        // Record User Message
-        $conversation->messages()->create([
-            'role' => 'user',
-            'content' => $validated['message'],
-        ]);
 
         // Send to AI Service
         $result = $this->aiService->sendMessage($validated['message'], $sessionId, $context);
@@ -85,17 +90,25 @@ class TravelAiChatController extends Controller
         $responseData = $result['data']['data'] ?? $result['data'];
         $assistantReply = $responseData['response'] ?? $responseData['message'] ?? $responseData['content'] ?? (is_string($responseData) ? $responseData : json_encode($responseData));
 
-        // Record Assistant Message
-        $conversation->messages()->create([
-            'role' => 'assistant',
-            'content' => is_string($assistantReply) ? $assistantReply : json_encode($assistantReply),
-            'metadata' => is_array($responseData) ? $responseData : null,
-        ]);
+        // Record Assistant Message if conversation was established
+        if ($conversation) {
+            try {
+                $conversation->messages()->create([
+                    'role' => 'assistant',
+                    'content' => is_string($assistantReply) ? $assistantReply : json_encode($assistantReply),
+                    'metadata' => is_array($responseData) ? $responseData : null,
+                ]);
 
-        $conversation->update(['last_message_at' => now()]);
+                $conversation->update(['last_message_at' => now()]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('AI chat assistant reply logging skipped: ' . $e->getMessage());
+            }
+        }
 
         return $this->successResponse([
             'response' => $assistantReply,
+            'reply' => $assistantReply,
+            'answer' => $assistantReply,
             'session_id' => $sessionId,
             'data' => $responseData,
         ], 'AI response generated successfully.');

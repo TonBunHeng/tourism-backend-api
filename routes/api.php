@@ -82,8 +82,10 @@ Route::get('/health', function () {
     ]);
 });
 
-// Root AI aliases strictly throttled to prevent quota abuse
-Route::middleware('throttle:10,1')->group(function () {
+$aiThrottle = app()->environment('local') ? 'throttle:120,1' : 'throttle:30,1';
+
+// Root AI aliases
+Route::middleware($aiThrottle)->group(function () {
     Route::post('/chat', [TravelAiChatController::class, 'chat']);
     Route::post('/ai/chat', [TravelAiChatController::class, 'chat']);
     Route::get('/ai/status', [TravelAiChatController::class, 'status']);
@@ -95,7 +97,10 @@ Route::middleware('throttle:10,1')->group(function () {
 | Consumed by Tourist Web (tourism-travel) & Android Mobile App
 |--------------------------------------------------------------------------
 */
-Route::prefix('travel')->group(function () {
+$travelReadThrottle = app()->environment('local') ? 'throttle:1000,1' : 'throttle:300,1';
+$travelAuthThrottle = app()->environment('local') ? 'throttle:1000,1' : 'throttle:300,1';
+
+Route::prefix('travel')->group(function () use ($travelReadThrottle, $travelAuthThrottle, $aiThrottle) {
 
     // 1.1 Public Authentication (Strictly Rate-Limited against Brute Force)
     Route::middleware('throttle:5,1')->group(function () {
@@ -111,7 +116,7 @@ Route::prefix('travel')->group(function () {
     });
 
     // 1.2 Public Read-Only Directory & Content (Standard API Throttling)
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware($travelReadThrottle)->group(function () {
         // Destinations / Places
         Route::get('/places', [TravelPlaceController::class, 'index']);
         Route::get('/places/{id}', [TravelPlaceController::class, 'show']);
@@ -190,8 +195,8 @@ Route::prefix('travel')->group(function () {
         Route::post('/galleries/{id}/views', [TravelGalleryController::class, 'recordView']);
     });
 
-    // 1.11 AI Assistant & Compute-Heavy Endpoints (Strictly Throttled: 10 req/min per IP)
-    Route::middleware('throttle:10,1')->group(function () {
+    // 1.11 AI Assistant & Compute-Heavy Endpoints
+    Route::middleware($aiThrottle)->group(function () {
         Route::post('/ai/chat', [TravelAiChatController::class, 'chat']);
         Route::post('/ai-chat', [TravelAiChatController::class, 'chat']);
         Route::post('/ai/recommendations', [TravelAiChatController::class, 'recommendations']);
@@ -205,7 +210,7 @@ Route::prefix('travel')->group(function () {
     });
 
     // 1.12 Authenticated Tourist Endpoints (Sanctum Auth)
-    Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+    Route::middleware(['auth:sanctum', $travelAuthThrottle])->group(function () {
 
         // Tourist Profile & Password Management
         Route::get('/auth/me', [TravelAuthController::class, 'me']);
@@ -296,7 +301,7 @@ Route::prefix('travel')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::prefix('business')
-    ->middleware(['auth:sanctum', 'role:business_owner,admin,super_admin', 'throttle:60,1'])
+    ->middleware(['auth:sanctum', 'role:business_owner,admin,super_admin', $travelAuthThrottle])
     ->group(function () {
         Route::get('/profile', [BusinessOwnerController::class, 'profile']);
         Route::get('/businesses', [BusinessOwnerController::class, 'index']);
@@ -363,7 +368,7 @@ Route::prefix('business')
 |--------------------------------------------------------------------------
 */
 Route::prefix('guide')
-    ->middleware(['auth:sanctum', 'role:guide_editor,admin,super_admin', 'throttle:60,1'])
+    ->middleware(['auth:sanctum', 'role:guide_editor,admin,super_admin', $travelAuthThrottle])
     ->group(function () {
         Route::get('/dashboard', [GuideController::class, 'dashboard']);
 

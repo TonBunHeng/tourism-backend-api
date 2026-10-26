@@ -42,8 +42,9 @@ return [
     ],
 
     'ai_chat' => [
-        'url' => env('AI_CHAT_API_URL', 'https://aichat-backend-pi.vercel.app'),
-        'timeout' => env('AI_CHAT_TIMEOUT', 30),
+        'url' => env('AI_CHAT_API_URL', 'http://127.0.0.1:8001'),
+        'timeout' => (int) env('AI_CHAT_TIMEOUT', 3),
+        'mode' => env('AI_CHAT_MODE', 'local'),
     ],
 
 
